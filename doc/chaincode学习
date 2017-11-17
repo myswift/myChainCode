@@ -1,0 +1,168 @@
+参考：http://hyperledger-fabric.readthedocs.io/en/latest/chaincode4noah.html
+
+chaincode也能被称作“智能合约”，一般情况下，chaincode不能直接去访问另一个chaincode创建的状态，但是在相同网络下，在合适的许可下，chaincode可以调用另一个chaincode去访问其创建的状态。
+
+1.chaincode生命周期
+
+Hyperledger Fabric API允许与blockchain网络中的各个节点（peers，orderers，MSPs）进行交互，同时也允许在endoring peer上package、install、instantiate以及upgrade chaincode。Hyperledger Fabric语言特定的SDK抽象了Hyperledger Fabric API的细节，以帮助应用程序开发，尽管它也能用作管理chaincode的生命周期。另外，CLI可以直接访问Hyperledger Fabric API。
+
+我们提供了4种命令去管理chaincode生命周期：package、install、instantiate、upgrade。将来发布的版本的会增加stop以及start transaction用于停止与开启chaincode，而不用去卸载chaincode。chaincode在成功install以及instantiate之后，chaincode则是运行状态，能够通过invoke transaction来处理transaction。后续也能够对chaincode进行升级。
+
+2.package
+
+chaincode package包括三个部分：
+•由ChaincodeDeploymentSpec（CDS）定义的chaincode。CDS根据代码及其他属性（如名称与版本）定义了chaincode package；
+•一个可选的instantiation策略，能够被用作endorsement的策略（Endorsement policie）进行描述；
+•拥有chaincode的entities的一组签名。
+
+其中签名有以下几种目的：
+•建立chaincode的所有权；
+•允许验证package中的内容；
+•允许检测package是否被篡改。
+
+channel上的chaincode的instantiation交易的创建者能够被chaincode的instantiation策略验证。
+
+2.1 创建package
+
+现有两种打包chaincode的方法。第一种，当你想有被多个所有者所拥有的某个chaincode，需要该chaincode package被上述多个所有者签名。上述工作流需要我们首先初始化创建一个被签名的chaincode package（SignedCDS），然后将其按顺序的传递给其他所有者进行签名。
+
+第二种也是更简单的工作流程是，当部署一个仅有节点（该节点能够发布install transaction）的身份签名的SignedCDS的时候。
+
+首先，让我们来看看更复杂的情况。
+
+使用如下命令创建一个被签名的chaincode package，
+
+peer chaincode package -n mycc -p github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02 -v 0 -s -S -i "AND('OrgA.admin')" ccpack.out
+
+其中，-s选项创建了一个能被多个所有者签名的package，而不是简单的创建一个原始的CDS。一旦-s被指定，如果其他所有者想要签名这个CDS，则-S选项必须被指定。否则，这个过程将会创建一个SignedCDS，除CDS之外仅仅包括instantiation策略。
+
+-S选项使用被在core.yaml文件中定义的localMspid属性的值标识的MSP对package进行签名。
+
+-S选项是可选的。然而如果创建了一个没有签名的package，它不能被其他所有者使用signpackage命令进行签名。
+
+可选的-i选项允许为chaincode指定instantiation策略。instantiation策略与endorsement策略有着相同的格式，指定哪些身份能够实例化chaincode。在上述的例子中，仅仅OrgA的admin能够实例化chaincode。如果没有策略被提供，那么将会使用默认的策略，这个仅仅允许拥有peer的MSP的管理员身份实例化chaincode。
+
+2.2 package的签名
+
+在创建阶段就被签名的chaincode package能够交给其他所有者进行检查与签名。该工作流程支持带外对chaincode进行签名。
+
+ ChaincodeDeploymentSpec可以选择由所有者集合进行签名，从而创建一个SignedChaincodeDeploymentSpec(SignedCDS)。SignedCDS包括3个部分：
+
+1.CDS包括源代码，chaincode的名称与版本号；
+
+2.chaincode的实例化策略，表示为endorsement策略；
+
+3.chaincode所有者的列表，该列表由 Endorsement 定义。
+
+注意：当在某些channel上实例化chaincode的时候，这种endorsement策略是在带外确定的，用于提供合适的MSP主体。如果没指定实例化策略，则默认的策略就是channel的任何MSP管理员。
+
+每一个chaincode的所有者通过将其与该所有者的身份（例如证书）组合并签署组合结果来endorse ChaincodeDeploymentSpec。
+
+一个chaincode的所有者能够对之前创建的签名过的package进行签名，需要使用如下命令：
+
+peer chaincode signpackage ccpack.out signedccpack.out
+
+其中cpack.out 与 signedccpack.out分别是输入与输出包。signedccpack.out包括一个对package附加的签名（通过local msp进行的签名）。
+
+3.安装chaincode
+
+安装transaction将chaincode的源代码打包成被称之为ChaincodeDeploymentSpec（CDS）的规定的格式，然后安装到将会执行chaincode的peer节点上。
+
+注意：需将chaincode安装到channel中每个endoring peer（将会执行chaincode）上。
+
+当安装API只是一个ChaincodeDeploymentSpec时，它将默认初始化策略并包括一个空的所有者列表。
+
+注意：chaincode应该仅仅被安装在chaincode所有者成员的endoring peer节点上，用于实现该chaincode对于网络中其他成员在逻辑上是保密的。没有chaincode的成员，不能成为chaincode transaction的endorser；也就是说，它们不能执行chaincode。但是，他们仍然能够验证与提交transaction到Ledger上。
+
+安装chaincode会发送一个SignedProposal到lifecycle system chaincode (LSCC) 。例如，使用CLI安装sacc的样例chaincode，命令如下：
+
+peer chaincode install -n asset_mgmt -v 1.0 -p sacc
+
+CLI内部创建了sacc的SignedChaincodeDeploymentSpec，然后把这个发送给本地peer，该peer会调用LSCC上的安装方法。参数-p选择指定了chaincode的路径，该源代码必须在GOPATH的路径下，例如$GOPATH/src/sacc。
+
+注意：为了在peer上安装chaincode，SignedProposal的签名必须来自于peer的本地MSP管理员之一。
+
+4.实例化（instantiate）
+
+实例化transaction调用lifecycle System Chaincode (LSCC) 用于创建及初始化channel上的chaincode。chaincode-channel绑定过程：chaincode能够被绑定到任意数量的channel，以及在每个channel上单独的操作。换句话说，无论有chaincode安装及实例化到多少个channel上，每个channel的状态都是隔离的。
+
+实例化transaction的创建者必须满足包含在SignedCDS内chaincode的实例化策略，而且还必须是channel的写入器（作为channel创建的一部分被配置）。这对于channel来说很重要，这样可以防止部署chaincode的流氓实体或者欺骗者在未被绑定的channel上执行chaincode。
+
+默认的实例化策略是任意的channel MSP的管理员，因此chaincode实例化transaction的创建者必须是channel管理员之一。当transaction proposal到达endorser后，endorser会根据实例化策略验证创建者的签名。在提交这个transaction到Ledger之前，在transaction验证时再一次完成该操作。
+
+实例化transaction同样设置了channel上的chaincode的endorsement策略 。endorsement 策略描述了 transacation被channel上成员接受的认证要求。
+
+例如，使用CLI去实例化sacc的chaincode并初始化状态为john与0，命令如下：
+
+peer chaincode instantiate -n sacc -v 1.0 -c '{"Args":["john","0"]}' -P "OR ('Org1.member','Org2.member')"
+
+上述endorsement策略表示，org1.member 或者 org2.member 必须对调用使用sacc的transaction进行签名，以保障transaction是有效的。在成功实例化后，channel的chaincode进入激活状态，可以处理任意的transaction proposal。transaction到达endoring peer时，这些transaction同时被处理。
+
+5.升级
+
+chaincode的升级通过改变其版本号（作为SignedCDS的一部分）。SignedCDS另外的部分，如所有者及实例化策略都是可选的。然而，chaincode的名称必须是一致的，否则会被当做另外一个新的chaincode。
+
+在升级之前，必须将新版本的chaincode安装到有需求的endorser上。升级也是transaction，类似于实例化transaction，该transaction会把新版本的chaincode绑定到channel中去。其他绑定老版本的chaincode仍然执行老版本。换句话说，升级transaction只能在一个时间点对一个channel产生影响。
+
+注意：由于可能存在多个版本的chaincode同时存在，升级过程不会自动删除老版本chaincode，用户必须手动操作这个过程。
+
+升级transaction与实例化transaction有一点不同的是：通过现有的chaincode实例化策略检查升级transaction，而不是用新的策略检查。这是为了确保只有当前实例化策略中指定的成员能够升级chaincode。
+
+注意：在升级期间，chaincode的init函数也会被调用，执行有关升级的数据或者使用这些数据重新进行初始化，需要小心的是，在升级chaincode的期间避免对状态进行重置了。
+
+6.停止及启动
+
+目前该功能还没有实现，目前可以通过手动删除chaincode容器以及从每个endorser上删除SignedCDS 来实现停止功能。通过删除endoring peer节点正在运行的主机或者虚拟机上的chaincode容器来实现删除chaincode容器，接下来删除每个endoring peer节点上的SignedCDS。
+
+docker rm -f <container id>
+rm /var/hyperledger/production/chaincodes/<ccname>:<ccversion>
+
+停止功能在以受控的方式进行升级的流程中是很有用的，在发布升级之前对chaincode进行停止操作。
+
+7.CLI
+
+目前，你可以在运行的docker容器中调用命令。为了看看现有的CLI命令，你可以在运行的fabric-peer的docker容器中执行如下命令：
+
+docker run -it hyperledger/fabric-peer bash
+# peer chaincode --help
+
+输入如下：
+
+
+
+为方便在脚本应用下使用，在命令失败的条件下，peer命令总是会产生一个非0的返回码。
+
+chaincode的命令事例如下：
+
+
+复制代码
+peer chaincode install -n mycc -v 0 -p path/to/my/chaincode/v0
+peer chaincode instantiate -n mycc -v 0 -c '{"Args":["a", "b", "c"]} -C mychannel
+peer chaincode install -n mycc -v 1 -p path/to/my/chaincode/v1
+peer chaincode upgrade -n mycc -v 1 -c '{"Args":["d", "e", "f"]} -C mychannel
+peer chaincode query -C mychannel -n mycc -c '{"Args":["query","e"]}'
+peer chaincode invoke -o orderer.example.com:7050  --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C mychannel -n mycc -c '{"Args":["invoke","a","b","10"]}'
+
+复制代码
+
+8.系统chaincode
+
+系统chaincode跟普通chaincode有着相同的编程模型，除了在peer内运行而不是像普通chaincode在隔离的容器中运行。因此，系统chaincode内置为peer的可执行文件中，不用遵循上述的生命周期。特别地，安装、实例化、以及升级不适用于系统chaincode。
+
+系统chaincode的目的就是减少peer与chaincode的gRPC通信的开销，同时权衡管理的灵活性。例如，系统chaincode只能通过peer的二进制文件升级。系统chaincode必须通过一组固定的参数进行注册，同时不具有endorsement策略。
+
+ Hyperledger Fabric用到的系统chaincode，实现了一系列系统功能，以便系统集成人员能够根据需求对它们进行修改与替换。
+
+现有的系统chaincode如下：
+
+LSCC 生命周期系统chaincode处理上述描述的生命周期管理。
+
+CSCC 配置系统chaincode处理在peer上的channel配置。
+
+QSCC 查询系统chaincode提供账本的查询API，例如获取block以及transaction。
+
+ESCC endorsement系统chaincode通过对transaction proposal响应进行签名来处理endorsement过程。
+
+VSCC 验证系统chaincode处理transaction验证，包括检查endorsement策略以及多进程并发控制。
+
+在修改或者替换特别是LSCC,ESCC以及VSCC 系统chaincode时必须小心，因为他们在主transaction执行的路径中。值得注意的是，VSCC在将block提交至账本之前，所有在channel的peer会计算相同的验证以避免账本分歧（不确定性）。如果VSCC被改变或者替换了，需要特别小心。
