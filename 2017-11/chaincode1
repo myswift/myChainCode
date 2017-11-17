@@ -32,19 +32,16 @@ func (t *LoinChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
    return shim.Error("Received unknown function invocation")
 }
 func (t *LoinChaincode) invoke(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-   return shim.Success([]byte("Called test1"))
+   return shim.Success([]byte("Called test"))
 }
 // query callback representing the query of a chaincode
 func (t *SimpleChaincode) query(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var A string // Entities
 	var err error
-
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of arguments. Expecting name of the person to query")
 	}
-
 	A = args[0]
-
 	// Get the state from the ledger
 	Avalbytes, err := stub.GetState(A)
 	if err != nil {
