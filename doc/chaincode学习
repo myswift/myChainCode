@@ -29,7 +29,6 @@ channel上的chaincode的instantiation交易的创建者能够被chaincode的ins
 第二种也是更简单的工作流程是，当部署一个仅有节点（该节点能够发布install transaction）的身份签名的SignedCDS的时候。
 
 首先，让我们来看看更复杂的情况。
-
 使用如下命令创建一个被签名的chaincode package，
 
 peer chaincode package -n mycc -p github.com/hyperledger/fabric/examples/chaincode/go/chaincode_example02 -v 0 -s -S -i "AND('OrgA.admin')" ccpack.out
