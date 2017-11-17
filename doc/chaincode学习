@@ -142,8 +142,6 @@ peer chaincode upgrade -n mycc -v 1 -c '{"Args":["d", "e", "f"]} -C mychannel
 peer chaincode query -C mychannel -n mycc -c '{"Args":["query","e"]}'
 peer chaincode invoke -o orderer.example.com:7050  --tls $CORE_PEER_TLS_ENABLED --cafile $ORDERER_CA -C mychannel -n mycc -c '{"Args":["invoke","a","b","10"]}'
 
-复制代码
-
 8.系统chaincode
 
 系统chaincode跟普通chaincode有着相同的编程模型，除了在peer内运行而不是像普通chaincode在隔离的容器中运行。因此，系统chaincode内置为peer的可执行文件中，不用遵循上述的生命周期。特别地，安装、实例化、以及升级不适用于系统chaincode。
