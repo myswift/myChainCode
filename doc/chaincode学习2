@@ -1,0 +1,345 @@
+参考：http://hyperledger-fabric.readthedocs.io/en/latest/chaincode4ade.html
+
+chaincode是由go语言写的，实现了定义的接口。其他语言例如JAVA也是支持的。通过application体积的transaction，chaincode可以初始化并管理Ledger状态。
+
+一个chaincode创建的Ledger状态是独立的，不能被其他chaincode直接访问。在合适的许可下，chaincode能够调用在相同网络下的其他chaincode用于访问其Ledger状态。
+
+接下来，我们以chaincode开发者的视野来看看chaincode。下面我们以一个chaincode案例来看看chaincode Shim API的每一个方法。
+
+1.Chaincode API
+
+每一个chaincode需要实现Chaincode接口，其方法是用于响应接收到的transaction。当chaincode接收到instantiate或者upgrade transaction时Init方法被调用了，以便chaincode能够执行任何必要的初始化，包括application state的初始化。当chaincode接收到invoke transaction时调用invoke方法，用于处理transaction proposal。
+
+“shim”API中其他的接口是 ChaincodeStubInterface  用于访问及改变Ledger，以及在chaincode之间调用。
+
+在本教程中，我们将通过实现简单的chaincode应用程序（管理简单的“资产”）来演示这些API的使用。
+
+2.简单的资产chaincode
+
+我们的application是一个基本的样例chaincode，用于在Ledger上创建资产（键值对）。
+
+2.1 选择代码的位置
+
+首选需要确定Go的环境被安装以及被合适的配置。
+
+为了简单起见，我们使用以下命令：
+
+mkdir -p $GOPATH/src/sacc && cd $GOPATH/src/sacc
+接下来，我们创建源码文件
+
+touch sacc.go
+2.2 Housekeeping
+
+每一个chaincode都实现了Chaincode接口 <https://github.com/hyperledger/fabric/blob/master/core/chaincode/shim/interfaces.go#L28>，特别是Init以及Invoke函数。因此，我们引入
+
+复制代码
+package main
+
+import (
+    "fmt"
+
+    "github.com/hyperledger/fabric/core/chaincode/shim"
+    "github.com/hyperledger/fabric/protos/peer"
+)
+复制代码
+2.3 初始化chaincode
+
+接下来，我们事先Init函数
+
+// Init is called during chaincode instantiation to initialize any data.
+func (t *SimpleAsset) Init(stub shim.ChaincodeStubInterface) peer.Response {
+
+}
+注：chaincode upgrade也调用这个函数。当一个chaincode要升级时，确保合适修正Init函数。如果没有需要迁移的东西，或者没有需要在升级时初始化的东西，需要提供的空的init函数。
+
+接下来，我们调用ChaincodeStubInterface.GetStringArgs方法获取Init中需要的参数，并检查参数的有效性。我们期望获取的参数是一个键值对。
+
+复制代码
+// Init is called during chaincode instantiation to initialize any
+// data. Note that chaincode upgrade also calls this function to reset
+// or to migrate data, so be careful to avoid a scenario where you
+// inadvertently clobber your ledger's data!
+func (t *SimpleAsset) Init(stub shim.ChaincodeStubInterface) peer.Response {
+  // Get the args from the transaction proposal
+  args := stub.GetStringArgs()
+  if len(args) != 2 {
+    return shim.Error("Incorrect arguments. Expecting a key and a value")
+  }
+}
+复制代码
+接下来，由于我们的调用是有效的，我们将会在Ledger上存储初始状态。为了实现状态的存储，我们将会调用ChaincodeStubInterface.PutState方法，并把键值作为参数进行输入。假设一切都工作正常，则会返回一个peer.Response对象，表面初始化成功。
+
+复制代码
+// Init is called during chaincode instantiation to initialize any
+// data. Note that chaincode upgrade also calls this function to reset
+// or to migrate data, so be careful to avoid a scenario where you
+// inadvertently clobber your ledger's data!
+func (t *SimpleAsset) Init(stub shim.ChaincodeStubInterface) peer.Response {
+  // Get the args from the transaction proposal
+  args := stub.GetStringArgs()
+  if len(args) != 2 {
+    return shim.Error("Incorrect arguments. Expecting a key and a value")
+  }
+
+  // Set up any variables or assets here by calling stub.PutState()
+
+  // We store the key and the value on the ledger
+  err := stub.PutState(args[0], []byte(args[1]))
+  if err != nil {
+    return shim.Error(fmt.Sprintf("Failed to create asset: %s", args[0]))
+  }
+  return shim.Success(nil)
+}
+复制代码
+2.4 调用chaincode
+
+首先，添加Invoke函数签名
+
+// Invoke is called per transaction on the chaincode. Each transaction is
+// either a 'get' or a 'set' on the asset created by Init function. The 'set'
+// method may create a new asset by specifying a new key-value pair.
+func (t *SimpleAsset) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
+
+}
+就像上述Init的函数那样，我们需要通过ChaincodeStubInterface获取参数。Invoke函数的参数就是需要调用chaincode应用的名称。在我们的例子中，我们的应用有两个简单的函数set与get，允许asset的值被设定，同时允许获取现在的状态。我们首先调用ChaincodeStubInterface.GetFunctionAndParameters用来获取chaincode应用的函数名称与参数。
+
+复制代码
+// Invoke is called per transaction on the chaincode. Each transaction is
+// either a 'get' or a 'set' on the asset created by Init function. The Set
+// method may create a new asset by specifying a new key-value pair.
+func (t *SimpleAsset) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
+    // Extract the function and args from the transaction proposal
+    fn, args := stub.GetFunctionAndParameters()
+
+}
+复制代码
+接着，我们设置set与get函数名称，并调用这些chaincode应用函数，通过shim返回一个合适的响应。Error函数将会把一个响应序列化成gRPC protobuf消息。
+
+复制代码
+// Invoke is called per transaction on the chaincode. Each transaction is
+// either a 'get' or a 'set' on the asset created by Init function. The Set
+// method may create a new asset by specifying a new key-value pair.
+func (t *SimpleAsset) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
+    // Extract the function and args from the transaction proposal
+    fn, args := stub.GetFunctionAndParameters()
+
+    var result string
+    var err error
+    if fn == "set" {
+            result, err = set(stub, args)
+    } else {
+            result, err = get(stub, args)
+    }
+    if err != nil {
+            return shim.Error(err.Error())
+    }
+
+    // Return the result as success payload
+    return shim.Success([]byte(result))
+}
+复制代码
+2.5 实现chaincode应用
+
+我们的chaincode应用实现了两个函数，能够通过Invoke进行调用。接下来实现这些函数。就像我们上面所提到的，我使用chaincode shim API的ChaincodeStubInterface.PutState与ChaincodeStubInterface.GetState来访问access的状态。
+
+复制代码
+// Set stores the asset (both key and value) on the ledger. If the key exists,
+// it will override the value with the new one
+func set(stub shim.ChaincodeStubInterface, args []string) (string, error) {
+    if len(args) != 2 {
+            return "", fmt.Errorf("Incorrect arguments. Expecting a key and a value")
+    }
+
+    err := stub.PutState(args[0], []byte(args[1]))
+    if err != nil {
+            return "", fmt.Errorf("Failed to set asset: %s", args[0])
+    }
+    return args[1], nil
+}
+
+// Get returns the value of the specified asset key
+func get(stub shim.ChaincodeStubInterface, args []string) (string, error) {
+    if len(args) != 1 {
+            return "", fmt.Errorf("Incorrect arguments. Expecting a key")
+    }
+
+    value, err := stub.GetState(args[0])
+    if err != nil {
+            return "", fmt.Errorf("Failed to get asset: %s with error: %s", args[0], err)
+    }
+    if value == nil {
+            return "", fmt.Errorf("Asset not found: %s", args[0])
+    }
+    return string(value), nil
+}
+复制代码
+2.6 合并上述代码
+
+复制代码
+package main
+
+import (
+    "fmt"
+
+    "github.com/hyperledger/fabric/core/chaincode/shim"
+    "github.com/hyperledger/fabric/protos/peer"
+)
+
+// SimpleAsset implements a simple chaincode to manage an asset
+type SimpleAsset struct {
+}
+
+// Init is called during chaincode instantiation to initialize any
+// data. Note that chaincode upgrade also calls this function to reset
+// or to migrate data.
+func (t *SimpleAsset) Init(stub shim.ChaincodeStubInterface) peer.Response {
+    // Get the args from the transaction proposal
+    args := stub.GetStringArgs()
+    if len(args) != 2 {
+            return shim.Error("Incorrect arguments. Expecting a key and a value")
+    }
+
+    // Set up any variables or assets here by calling stub.PutState()
+
+    // We store the key and the value on the ledger
+    err := stub.PutState(args[0], []byte(args[1]))
+    if err != nil {
+            return shim.Error(fmt.Sprintf("Failed to create asset: %s", args[0]))
+    }
+    return shim.Success(nil)
+}
+
+// Invoke is called per transaction on the chaincode. Each transaction is
+// either a 'get' or a 'set' on the asset created by Init function. The Set
+// method may create a new asset by specifying a new key-value pair.
+func (t *SimpleAsset) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
+    // Extract the function and args from the transaction proposal
+    fn, args := stub.GetFunctionAndParameters()
+
+    var result string
+    var err error
+    if fn == "set" {
+            result, err = set(stub, args)
+    } else { // assume 'get' even if fn is nil
+            result, err = get(stub, args)
+    }
+    if err != nil {
+            return shim.Error(err.Error())
+    }
+
+    // Return the result as success payload
+    return shim.Success([]byte(result))
+}
+
+// Set stores the asset (both key and value) on the ledger. If the key exists,
+// it will override the value with the new one
+func set(stub shim.ChaincodeStubInterface, args []string) (string, error) {
+    if len(args) != 2 {
+            return "", fmt.Errorf("Incorrect arguments. Expecting a key and a value")
+    }
+
+    err := stub.PutState(args[0], []byte(args[1]))
+    if err != nil {
+            return "", fmt.Errorf("Failed to set asset: %s", args[0])
+    }
+    return args[1], nil
+}
+
+// Get returns the value of the specified asset key
+func get(stub shim.ChaincodeStubInterface, args []string) (string, error) {
+    if len(args) != 1 {
+            return "", fmt.Errorf("Incorrect arguments. Expecting a key")
+    }
+
+    value, err := stub.GetState(args[0])
+    if err != nil {
+            return "", fmt.Errorf("Failed to get asset: %s with error: %s", args[0], err)
+    }
+    if value == nil {
+            return "", fmt.Errorf("Asset not found: %s", args[0])
+    }
+    return string(value), nil
+}
+
+// main function starts up the chaincode in the container during instantiate
+func main() {
+    if err := shim.Start(new(SimpleAsset)); err != nil {
+            fmt.Printf("Error starting SimpleAsset chaincode: %s", err)
+    }
+}
+复制代码
+2.7 build chaincode
+
+编译chaincode
+
+go get -u --tags nopkcs11 github.com/hyperledger/fabric/core/chaincode/shim
+go build --tags nopkcs11
+接下来测试chaincode
+
+2.8 使用dev模式测试
+
+一般来说，peer启动并持有chaincode。然而在开发模式下，chaincode由用户build并启动。在快速代码/构建/运行/调试周期周转期间的链码开发阶段，此模式非常有用。
+
+我们通过为利用预先生成的order和channel artifacts来启动一个简单的开发网络的“开发模式”。 因此，用户可以立即编译chaincode和调用函数。
+
+3.安装hyberLedger fabric 样例
+
+请先安装hyberLedger fabric 样例。
+
+进入fabric-samples以及chaincode-docker-devmode目录
+
+cd chaincode-docker-devmode
+4.下载docker镜像
+
+我们需要四个Docker镜像用于开发模式允许docker compose script.脚本，如果你已经安装了fabric-samples仓库克隆，并且按照说明下载了platform-specific-binaries，接下来你应该在本地按照Docker镜像。输入docker images命令去展示Docker镜像。应该能看到如下：
+
+复制代码
+docker images
+REPOSITORY                     TAG                                  IMAGE ID            CREATED             SIZE
+hyperledger/fabric-tools       latest                               e09f38f8928d        4 hours ago         1.32 GB
+hyperledger/fabric-tools       x86_64-1.0.0-rc1-snapshot-f20846c6   e09f38f8928d        4 hours ago         1.32 GB
+hyperledger/fabric-orderer     latest                               0df93ba35a25        4 hours ago         179 MB
+hyperledger/fabric-orderer     x86_64-1.0.0-rc1-snapshot-f20846c6   0df93ba35a25        4 hours ago         179 MB
+hyperledger/fabric-peer        latest                               533aec3f5a01        4 hours ago         182 MB
+hyperledger/fabric-peer        x86_64-1.0.0-rc1-snapshot-f20846c6   533aec3f5a01        4 hours ago         182 MB
+hyperledger/fabric-ccenv       latest                               4b70698a71d3        4 hours ago         1.29 GB
+hyperledger/fabric-ccenv       x86_64-1.0.0-rc1-snapshot-f20846c6   4b70698a71d3        4 hours ago         1.29 GB
+复制代码
+5.启动网络
+
+docker-compose -f docker-compose-simple.yaml up
+上述代码启动了包括SingleSampleMSPSolo orderer profile的网络，同时启动开发模式的peer。这个启动了另外两个容器，一个是chaincode的环境以及与chaincode交互的CLI。在CLI容器中进行创建与加入channel的命令，因此我们可以开始chaincode的调用。
+
+6.build与启动chaincode
+
+docker exec -it chaincode bash
+进入容器，
+
+root@d2629980e76b:/opt/gopath/src/chaincode#
+接下来，编译chaincode
+
+cd sacc
+go build
+现在运行chaincode：
+
+CORE_PEER_ADDRESS=peer:7051 CORE_CHAINCODE_ID_NAME=mycc:0 ./sacc
+peer启动了chaincode，以及chaincode日志表明peer成功注册了chaincode。该阶段chaincode没有与任何channel产生关联。这在使用实例化命令的后续步骤中完成。
+
+7.使用chaincode
+
+即使现在在--peer-chaincodedev模式下，仍然需要安装chaincode，以便生命周期的chaincode能够正常检查。
+
+我们利用CLI容器去调用这些方法
+
+docker exec -it cli bash
+peer chaincode install -p chaincodedev/chaincode/sacc -n mycc -v 0
+peer chaincode instantiate -n mycc -v 0 -c '{"Args":["a","10"]}' -C myc
+接下来改变a的值为20.
+
+peer chaincode invoke -n mycc -c '{"Args":["set", "a", "20"]}' -C myc
+最后查询
+
+peer chaincode query -n mycc -c '{"Args":["query","a"]}' -C myc
+8.测试新的chaincode
+
+这个案例中，我们只实现了sacc。我们可以很轻松的测试其他的chaincode通过吧这些chaincode加入到chaincode子目录下，然后重启网络。此时，他们能够在chaincode容器中被访问。
