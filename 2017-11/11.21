@@ -1,6 +1,6 @@
 
 1，测试通过chaincode输入json，结果报错。测试不通过。不支持输入json，只支持字符串。 改用多个参数的方式保存用户详细信息。
-2，写个征信chaincode demo，init时存入用户基本信息，通过查询接口可以查到详细内容。代码如下：
+2，写个征信chaincode demo，init时存入用户基本信息，通过查询接口可以查到详细内容。使用Fabric samples在命令行方式下执行成功。代码如下：
 
 
 package main
