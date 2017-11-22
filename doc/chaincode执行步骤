@@ -1,0 +1,18 @@
+------------------chaincode执行过程----------------------
+Hyperledger Fabric Samples
+命令行方式执行。开发者模式进行测试
+
+第一步：编译 
+go build
+第二步：运行chaincode
+CORE_PEER_ADDRESS=peer:7051 CORE_CHAINCODE_ID_NAME=mycc:0 ./sacc
+第三步：进入cli容器.在-peer-chaincodedev模式下.进入到chaincode-docker-devmode
+docker exec -it cli bash
+第四步：安装chaincode
+peer chaincode install -p chaincodedev/chaincode/sacc -n mycc -v 0
+第五步:实例化
+peer chaincode instantiate -n mycc -v 0 -c '{"Args":["a","10"]}' -C myc
+第六步：调用invoke方法保存数据
+peer chaincode invoke -n mycc -c '{"Args":["set", "a", "20"]}' -C myc
+第七步：调用query方法查询
+peer chaincode query -n mycc -c '{"Args":["query","a"]}' -C myc
