@@ -1,0 +1,65 @@
+安装Fabric 过程中遇到问题总结
+
+--------------------问题：
+jack@jack-VirtualBox:~/go/src/github.com/hyperledge/fabric/examples/e2e_cli$ ./network_setup.sh  up
+setting to default channel 'mychannel'
+mychannel
+Building cryptogen
+make: Entering directory '/home/jack/go/src/github.com/hyperledge/fabric'
+can't load package: package github.com/hyperledger/fabric/core/chaincode/shim: cannot find package "github.com/hyperledger/fabric/core/chaincode/shim" in any of:
+	/usr/local/go/src/github.com/hyperledger/fabric/core/chaincode/shim (from $GOROOT)
+	/home/jack/go/src/github.com/hyperledger/fabric/core/chaincode/shim (from $GOPATH)
+find: `/home/jack/go/src/github.com/hyperledger/fabric/core/chaincode/shim': 没有那个文件或目录
+Building release/linux-amd64/bin/configtxgen for linux-amd64
+mkdir -p release/linux-amd64/bin
+CGO_CFLAGS=" " GOOS=linux GOARCH=amd64 go build -o /home/jack/go/src/github.com/hyperledge/fabric/release/linux-amd64/bin/configtxgen -tags "nopkcs11" -ldflags "-X github.com/hyperledger/fabric/common/configtx/tool/configtxgen/metadata.Version=1.0.5-snapshot-c7c8827" github.com/hyperledger/fabric/common/configtx/tool/configtxgen
+can't load package: package github.com/hyperledger/fabric/common/configtx/tool/configtxgen: cannot find package "github.com/hyperledger/fabric/common/configtx/tool/configtxgen" in any of:
+	/usr/local/go/src/github.com/hyperledger/fabric/common/configtx/tool/configtxgen (from $GOROOT)
+	/home/jack/go/src/github.com/hyperledger/fabric/common/configtx/tool/configtxgen (from $GOPATH)
+Makefile:342: recipe for target 'release/linux-amd64/bin/configtxgen' failed
+make: *** [release/linux-amd64/bin/configtxgen] Error 1
+make: Leaving directory '/home/jack/go/src/github.com/hyperledge/fabric'
+-------------------原因：
+go/src/github.com/hyperledger 目录写成go/src/github.com/hyperledge
+
+
+--------------------问题：No go in PATH
+#检查依赖，需要go docker git curl 环境
+EXECUTABLES = go docker git curl
+K := $(foreach exec,$(EXECUTABLES),\
+   $(if $(shell which $(exec)),some string,$(error "No $(exec) in PATH: Check dependencies")))
+--------------原因：go 环境变量没有生效 source一下
+
+
+--------------问题：
+jack@jack-VirtualBox:~/go/src/github.com/hyperledge/fabric/examples/e2e_cli$ ./network_setup.sh  down
+setting to default channel 'mychannel'
+/usr/local/bin/docker-compose: 行 1: 未预期的符号 `newline' 附近有语法错误
+/usr/local/bin/docker-compose: 行 1: `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">'
+------------原因：docker-compose没有下载成功，只产生了一个文本文件docker-compose
+------------方案：下载docker-compose
+curl -L https://github.com/docker/compose/releases/download/1.16.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose 
+
+
+-------------问题：
+执行go build ./ 报错
+.\hyperledger\fabric\vendor\github.com\miekg\pkcs11\pkcs11.g‌​o:29:18: 
+fatal error:ltdl.h: No such file or directory
+------解决：sudo apt install libltdl-dev
+
+---------------问题：
+Could not resolve host: github.com
+---------------方案：
+第一步 查看一下配置文件/etc/resolv.conf
+添加：nameserver 8.8.8.8
+第二步
+sudo vi /etc/hosts
+然后添加github的地址
+192.30.255.112  github.com
+
+----------------问题
+install npm报错
+ “code EINTEGRITY”
+----------------方案
+使用npm 5.0一下版本
+
