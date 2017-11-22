@@ -1,3 +1,15 @@
+---------------fabric-samples 安装------------------
+git clone https://github.com/hyperledger/fabric-samples.git
+cd fabric-samples/fabcar
+#startFabric.sh脚本来加载网络 这个命令将会下载并解压缩Fabric docker镜像
+./startFabric.sh
+#执行docker ps命令以显示startFabric.sh脚本启动的进程
+
+#Now let’s compile your chaincode.
+go get -u --tags nopkcs11 github.com/hyperledger/fabric/core/chaincode/shim
+go build --tags nopkcs11
+#Testing Using dev mode
+cd chaincode-docker-devmode
 ------------------chaincode执行过程----------------------
 Hyperledger Fabric Samples
 命令行方式执行。开发者模式进行测试
