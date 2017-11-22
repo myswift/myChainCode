@@ -1,0 +1,11 @@
+---------------------安装node步骤----------------
+sudo wget https://npm.taobao.org/mirrors/node/latest-v9.x/node-v9.2.0.tar.gz 
+sudo wget https://npm.taobao.org/mirrors/node/latest-v8.x/node-v8.2.1.tar.gz
+sudo wget https://npm.taobao.org/mirrors/node/latest-v5.x/node-v5.10.0.tar.gz
+sudo tar xzvf node-v* && cd node-v*
+sudo ./configure
+#make比较慢，请等待执行完
+sudo make
+sudo make install
+node -v
+npm -v
