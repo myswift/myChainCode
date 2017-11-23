@@ -1,0 +1,45 @@
+要在链代码中处理日志，既可以使用标准 fmt 包和 print 语句，也可以使用 shim 包中的 ChaincodeLogger 类型。
+ChaincodeLogger 支持以下日志级别：
+CRITICAL
+ERROR
+WARNING
+NOTICE
+INFO
+DEBUG
+可以通过 3 种方式设置日志级别：
+shim.SetChaincodeLoggingLevel()：此方法将采用 CORE_LOGGING_CHAINCODE 集中的 core.yaml 文件内指定的日志级别。core.yaml 文件包含设置和部署区块链网络所需的所有配置信息。
+shim.SetLoggingLevel(level LoggingLevel)：此方法将在 shim 级别上设置日志级别。
+ChaincodeLogger.SetLevel(level LoggingLevel)：此方法将在单个记录器实例级别上设置日志级别。
+清单 13 展示了如何创建、配置和使用 ChaincodeLogger。
+清单 13. 创建、配置和使用 ChaincodeLogger
+
+func SampleLogging() {
+        //Different Logging Levels
+        criticalLevel, _ := shim.LogLevel("CRITICAL")
+        errorLevel, _ := shim.LogLevel("ERROR")
+        warningLevel, _ := shim.LogLevel("WARNING")
+        noticeLevel, _ := shim.LogLevel("NOTICE")
+        infoLevel, _ := shim.LogLevel("INFO")
+        debugLevel, _ := shim.LogLevel("DEBUG")
+ 
+        //Logging level at the shim level
+        shim.SetLoggingLevel(infoLevel)
+ 
+        //Create a logger instance
+        myLogger := shim.NewLogger("SampleChaincodeLogger")
+ 
+        //Set logging level on logger instance
+        myLogger.SetLevel(infoLevel)
+ 
+        //Check logging level
+        fmt.Println(myLogger.IsEnabledFor(infoLevel))
+ 
+        //Log statements
+        myLogger.Info("Info Message")
+        myLogger.Critical("Critical Message")
+        myLogger.Warning("Warning Message")
+        myLogger.Error("Error Message")
+        myLogger.Notice("Notice Message")
+        myLogger.Debug("Debug Message")
+ 
+    }
