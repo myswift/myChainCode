@@ -1,0 +1,21 @@
+如清单 7 和清单 8 中所示，stub.PutState 和 stub.GetState 方法只处理字节数组。所以，能够将链代码中使用的常规结构对象与 JSON 字符串进行相互转换很重要。
+清单 9 展示了如何将一种结构编组为可存储在账本中的 JSON 字符串字节数组。第 2 行创建了 PersonalInfo 对象的一个实例。第 3 行使用 json 包将对象编组为 JSON 字符串，并返回同一个字符串的字节数组。
+可以通过将 "encoding/json" 包含在顶部的 import 代码块中来导入 json 包。然后此字节数组可以使用清单 7 中给出的 stub.PutState 方法来存储到账本中。
+清单 9. 将一种结构编组为 JSON 字符串字节数组的代码
+
+var personalInfo PersonalInfo
+ personalInfo = PersonalInfo{"Varun", "Ojha", "dob", "varun@gmail.com", "9999999999"}
+ bytes, err ;= json.Marshal (&personalInfo)
+ if err != nil {
+        fmt.Println("Could not marshal personal info object", err)
+        return nil, err
+ }
+ err = stub.PutState("key", bytes)
+清单 10 展示如何将一种结构从字节数组解组为已填充的结构。第 1 行使用关联的键从账本中获取 PersonalInfo JSON 字符串字节。第 3 行将第 1 行中检索的字节解组为变量 personalInfo 所引用的 PersonalInfo 对象。
+现在可以使用第 4 行所示的点记法来访问和修改 personalInfo 对象。
+清单 10. 将一种结构从字节数组解组为已填充的结构的代码
+
+piBytes, err := stub.GetState(la1)  
+ var personalInfo PersonalInfo
+ err = json.Unmarshal(piBytes, &personalInfo)
+ fmt.Println(personalInfo.Firstname)
