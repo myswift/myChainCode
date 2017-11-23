@@ -23,6 +23,4 @@ IBM 区块链项目 Open Blockchain (OBC) 初探 http://8btc.com/article-2890-1.
 IBM Open Blockchain 白皮书节选 http://8btc.com/article-2891-1.html
 
 
-
-补充内容 (2016-10-21 17:22):
 一个简单支持UTXO模型和Account模型的数字货币,基于Hyperledger Chaincode。https://github.com/hydrusio/hydruscoin
