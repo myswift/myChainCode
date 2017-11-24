@@ -1,0 +1,261 @@
+区块链的数据结构
+
+State数据结构 由peer维护，key/value store
+
+Ledger  记录了所有成功和不成功的状态更新交易。Ledger被ordering service构造，是一个全排序的交易区块（有效的和无效的）哈希链。
+
+Ledger存储在peer节点和orderer的一个子集里。存储在peer上的Ledger和存储在Orderer上的Ledger不同地方在于peer上的Ledger在本地维护一个位掩码（比特位）用来区分有效交易和无效交易。
+
+PeerLedger在v1后续版本会被裁减。Orderers维护OrdererLedger用来保证peerLedger的容错和有效性。V1后续版本OrdererLedger可能也会被裁减，加入Ordering service的属性被维护。
+
+Ledger允许peer重放历史所有交易并重新构建state状态。这样上文提及的state结构是可选择的。
+
+Nodes  Nodes是指区块链中的通信实体。一个Node是指一个逻辑功能，因此不同类型的Nodes能够运行在同一台物理服务器上。关键在于Nodes实例怎样被组合在一个信任域里以及和管控他们的逻辑实例关联。
+
+存在三种类型的Node：
+
+Client：client提交交易调用到endorsers，广播交易建议到ordering service（client应该先提交交易到网络中的背书节点，获取背书签名后广播交易到ordering service指定的channel中）。
+
+Peer: peer发起交易，维护state状态和ledger的副本。另外，peer可以拥有endorser的角色。
+
+Orderer：orderer节点运行通信服务完成分发保证，类如原子的或者全部的order广播。
+
+ 
+
+Client client作为终端用户必须连接到peer才能与区块链通信。Client可能连接到任何peer节点。Client创建并调用交易。Client与peer和ordering service都会通信。
+
+Peer peer接收排序后的状态更新（区块形式），维护状态和账本。
+
+Peer可以同时实现endorsing peer的角色或者一个endorser。Endorsing peer的功能和一个特定的chaincode相关，用于在一个交易在提交前进行背书。每个chaincode可能指定一个背书策略（涉及一组endorsing peers）。这个策略定义了一个有效背书交易的必须条件和充分条件。在交易为deploy transactions的情况，deploy transaction用于安装新的chaincode。这时deploy transaction的背书策略特指system chaincode的背书策略。
+
+ 
+
+Ordering service nodes
+
+Orderers 提供ordering service，用来保证交付过程。Ordering service 能够通过不同方式实现：针对不同的网络和节点故障模型包括中心化的服务和分布式的协议。
+
+Ordering service提供一个共享的通信channel至clients和peers，提供广播交易消息服务。Clients 连接到channel后，可以在channel上广播消息，这些消息然后被分发到所有peers。
+
+这个channel提供了原子分发消息方式（可以实现total-order分发和可靠性的消息通信）。换句话说，channel对所有连接的peer输出同样的消息，并且按照同样的排序分发给所有peer。原子通信保障也被成为total-order广播或者在分布式系统中成为共识。广播的消息内容是纳入到区块链状态中的候选交易。
+
+ 
+
+分区（ordering service channels）。Ordering service能够支持多channel，类似公有/订阅消息系统。Clients连接到一个给定channel，然后发送和接收消息。Channels可以被理解为分区-clients连接到一个channel，对于其他channel的存在是无感知的，但是clients可以连接到多个channel。尽管Hyperledger Fabric有的ordering service实现支持多channels，为了简单起见，下面的文档中，我们假定ordering service包含一个独立channel/topic。
+
+ 
+
+Ordering service API。Peers通过ordering service提供的接口连接到ordering service提供的channel。Ordering service API包含两个基本操作（一般为异步事件）：
+
+Booadcast(blob)：client调用这个接口广播任意的消息到channel中。在BFT中档发送请求到一个服务也被称为request（blob）。
+
+Deliver(seqno, prevhash, blob)：ordering service调用这个接口分发消息到peers，分发过程指定一个非负整形序列号、最近分发blob的hash值。也就是，这是一个ordering service的输出事件。Deliver()在公共-订阅系统中也被称为notify()或者在BFT系统中被称为commit()。
+
+ 
+
+账本和区块构造。账本包含ordering service的所有输出数据。概要来说，这时一系列deliver（seqno,prevhash,blob）事件。通过prevhash构造一个hash链。
+
+大多数时候，因为效率原因，ordering service会在一个deliver事件中组合多个blobs和输出多个区块而不是一个交易。这种情况下，ordering service必须强制确认一个每一个区块中blob的排序。区块中blob的个数会根据ordering service的实现动态选择。
+
+ 
+
+下面，为便于描述，我们定义ordering service属性并解释交易背书的工作流（假定一个deliver事件只包括一个blob）。这些内容很容易的可以拓展到区块同理到一系列的deliver事件（根据上文描述的一个区块中包括明确的blobs排序）。
+
+ 
+
+Ordering service属性
+
+Ordering service的保障（或者原子广播channel）规定了广播消息做了什么以及所有分发消息中存在的关系。这些保障如下：
+
+1、安全性（一致性保障）：只要peers连接到channel足够长的时间（peers会断开连接或crash，但是会重启和重新连接），那么他们就会收到完全相同的deliver(seqno, prehash, blov)消息。这意味着在所有peer节点上接收的输出都按照同样的顺序。根据消息序列号以及同一序列号包含完全一样的内容（blob和prevhash）可以实现peer节点排序的一致。注意这只是一个逻辑排序，一个peer节点接收到的deliver（seqno,prehash,blob）并不需要其他的peer节点实时的接收到相同的消息。但是，对于一个seqno，两个正确的peer节点都会收到有同样prevhash和blob的deliver。另外，除非有client(peer)调用broadcast（blob），否则是不会deliver任何blob的。每个broadcast的blob只会deliver一次。
+
+ 
+
+Deliver()事件包含之前deliver事件中所包含数据的hash值(prevhash)（类似merkel值）。当ordering service完成原子广播后，prevhash就是seqno-1序号的deliver event参数的hash值。这样所有的deliver事件构成了一个哈希链，可以用这个哈希链去验证ordering service的完整性。
+
+2、活跃度（分发保障）ordering service的活跃度保障特指ordering service的一种实现方式。准确的保障能够可能会依靠网络或者节点错误模型。
+
+原则上，如果提交的client没有fail，那么ordering service需要保证每一个连接到ordering service的正常peer最终可以接收到所有提交的交易。
+
+总结来说，ordering service确保了一下属性：
+
+1、合约。对于任何不同的正常peer节点收到的deliver(seqno, prevhash0, blob0)和deliver(seqno, prevhash1, blob1)事件存在prehash0=prehash1和blob0=blob1。
+
+2、哈希链的完整性。对于正常peer节点上接收到的deliver(seqno-1, prehash0, blob0)和deliver(seqno, prevhash, blob)存在prevhash=HASH(seqno-1||prevhash||blob0)。
+
+3、连续性。如果一个正常的peer节点已经收到ordering service的输出deliver(seqno, prevhash, blob)，那么这个节点已经收到事件deliver（seqno-1, prehash0,blob0）。
+
+4、非创造性。Peer节点收到任何deliver(seqno, prevhash, blob)前肯定存在某个peer节点发送了broadcast(blob)事件。
+
+5、不可复制性(可选)。对于正常peers节点收到的任何两个事件broadcast(blob)和broadcast(blob’)，如果blob=blob’，那么seqno0=seqno1并且prevhash0=prevhash1。
+
+6、活跃度。如果一个正确的client调用了broadcast（blob）事件，那么每个正确的peer最终都会收到一个deliver(*, *, blob)事件。
+
+ 
+
+交易背书的工作过程
+
+下面，我们描述一个交易的更深层次的请求流程。
+
+Client创建一个交易并发送交易到client所选择的背书节点。
+
+为了调用一个交易，client发送一个PROPOSE消息到一系列的背书节点（可能不是同时发送）。对于一个给定chaincodeID对应的背书peer，client通过peer节点（client必须连接到peer节点，client发送交易消息到背书节点也是通过连接的peer节点发送的）使用这些endorsing peers。Client所连接的peer节点通过endorsement policy可以知道endorsing peer序列。举例来说，交易可以被发送到一个chaincodeID对应的所有endorsers。即便这样，有些endorsers可以离线，其他的endorsers可能会反对或者选择不对这个交易背书。提交交易的client试图满足可用的endorsers的策略。
+
+下面，我们首先详细描述PROPOSE消息的格式，然后我们讨论client和endorsers可能的交互模式。
+
+PROPOSE交易格式
+
+PROPOSE消息的格式是<PROPOSE, tx, [anchor]>，其中tx是必须的，anchor可选参数在下面描述。
+
+Tx=<clientID, chaincodeID, txPayload, timestamp, clientSig>。其中
+
+clientID是提交交易client的ID
+
+chaincodeID指的是交易所属于的chaincode对应的ID
+
+txPayload包含提交的交易本身
+
+Timestamp对于一个新的交易单调递增的整形值，值由client维护。
+
+clientSig是client上tx其他字段的签名
+
+调用交易和deploy交易（引用特定用来部署的系统chaincode的invoke交易）的txPayload的详细信息是不同的。对于invoke交易，txPayload包含两个字段：
+
+txPayload = <operation, metadata>
+
+其中operation表示chaincode操作（function）和参数
+
+Metadata表示和调用相关联的属性
+
+对于deploy交易，txPayload包含如下三个字段：
+
+txPayload = <source, metadata, policies>
+
+其中source表示chaincode的源码
+
+Metadata表示与chaincode和application相关的属性
+
+Policies包含所有peer节点都可以获取到的与chaincode相关的策略。例如背书策略。注意deploy交易背书策略并不在txPayload里，deploy交易的txPayload仅包含了背书策略的ID和它的参数。
+
+Anchor包含read version依赖，更具体的说是key-version对（anchor是K*N的子集），这把PROPOSE请求和特定version的keys（存储在KVS）绑定在一起。如果client制定了anchor参数，那么endorser仅当本地KVS中相应keys的version和anchor中匹配时才会背书。
+
+tx加密的哈希值对于所有节点用来作为一个唯一的交易标识tid(tid-HASH(tx))。Client把tid存储在内存中，等待endorsing peer的响应。
+
+ 
+
+消息模式
+
+Client决定和endorsers交互次序。例如一个client可以发送<PROPOSE,tx>(没有anchor参数)到一个单独的endorser，这个endorser然后生成了version dependencies(anchor)。Client然后可以使用上述生成的anchor作为参数发送PROPOSE消息到其他endorsers。同样，client可以直接发送<PROPOSE, tx>（不包括anchor）到所有背书节点。不同的通信方式都有可能，client可以灵活地选择不同方式。
+
+ 
+
+Endorsing peer模拟交易，生成背书签名
+
+当从client收到一个<PROPOSE,tx,[anchor]>消息后，endorsing peer epID 首先验证client的签名clientSig，然后模拟这个交易。如果PROPOSE消息指定了anchor，那么模拟交易仅仅依赖read version numbers（readset会在下文定义）。
+
+模拟交易包括背书节点暂时执行交易（txPayload），通过交易所引用的chaincode(chaincodeID)和本地存储的状态副本。
+
+作为运行的结果，endorsing peer计算read version依赖（readset）和状态更新（writeset）,在DB语言中也被称为MVCC+postimage信息。
+
+之前我们提到状态包含key/value对，所有的k/v实例都是有版本的，每个实例包含有序的版本信息，这个版本信息会在key所对应的value被更新时递增。Endorsing peer节点保存有所有k/v对，能够被chaincode获取，可以读和写，但是peer模拟交易时不会更新这个状态。特别是：
+
+1、在endorsing peer执行一个交易之前假定状态为s，对于交易读取的每个key值k，键值对（k,s(k).version）保存在readset中。
+
+2、另外，对于交易要更新key k的值为新的值value v’时，键值对（k, v’）被添加到writeset中。作为可选，v’可以是新的值相对于原值的delta值。
+
+ 
+
+如果client在PROPOSE消息中指定了anchor的值，那么指定的anchor信息必须和endorsing peer生成的readset一致时才能模拟交易。（anchor值应该在有些交易依赖于之前交易的完成情况或者对当前状态的条件有要求，只有状态满足一定要求或者某些交易完成后，才能模拟当前交易，这个时候anchor具有体现依赖关系的意义）。
+
+ 
+
+然后peer节点把tran-proposal(也可能是tx)发送至peer的背书交易逻辑，称为endorsing logic。默认情况下，endorsing logic接收tran-proposal然后签名这个tran-proposal。但是，endorsing logic可能有很多功能，例如通过tran-proposal和legacy系统交互以及使用tx作为输入来做决定是否背书一个交易。
+
+如果endorsing logic决定背书这个交易，那么会发送<TRANSACTION-ENDORSED, tid, tran-proposal,epSig>消息给提交交易的client（tx.clientID），其中：
+
+tran-proposal := (epID,tid,chaincodeID,txContentBlob,readset,writeset)
+
+这里txContentBlob是是chaincode/transaction的特定消息，这样做是为了可以使用txContentBlob在一些情况下代替Tx（例如：txContentBlob=tx.txPayload）。
+
+epSig是endorsing peer对tran-proposal的签名。
+
+如果endorsing logic拒绝背书交易，endorser会发送消息(TRANSACTION-INVALID, tid, REJECTED)到提交交易的client。
+
+注意在这一步endorser不会改变他的状态，endorsement在模拟交易时产生的状态更新不会影响到状态。
+
+ 
+
+Submitting client收集一个交易的endorsement并且通过ordering service广播这个endorsement。
+
+Submitting client直到接收到足够的(TRANSACTION-ENDORSED, tid, *, *) 消息和签名后，表明这个transaction proposal已经被背书。这个过程并不一定一次性完成，可能会分多次发送至背书节点完成背书。
+
+足够的数量多少由背书的策略决定。如果背书策略满足了，那么这个交易就已经被背书了；注意这是交易还没有被提交。Client收到的用来表示一个交易已被背书的签名消息TRANSACTION-ENDORSED集合被称为endorsement。如果提交交易的client没有收到transaction proposal的endorsement，那么client会丢弃这个交易，稍后重试。
+
+对于正常接收到endorsement的交易，我们现在开始运行ordering service。Client通过boroadcast(blob)调用ordering service，其中blob=endorsement。如果client没有直接调用ordering service的能力，那么client可能会通过client所连接的代理peer调用ordering service。这里的peer必须是client所信任的，不会从endorsement中删掉任何消息，否则更改后的endorsement会被认为无效。
+
+ 
+
+Ordering service分发交易信息到peer节点
+
+当peer收到deliver(seqno, prevhash, blob)事件后，同时peer已经完成所有序列号小于seqno的deliver事件的更新。Peer节点会做以下操作：
+
+1、根据chaincode的背书策略确认blob.endorsement是否有效。
+
+2、一般情况，peer验证依赖关系blob.endorsement.tran-proposal.readset没有同时被violated。复杂情况是，endorsement中的tran-proposals字段可能会不相同（endorsement中有多个背书节点返回的tran-proposal），这时endorsement策略指定了状态怎样更新。
+
+ 
+
+根据状态更新选择一致性属性还是“isolation guarantee”,依赖的验证有不同的实现方式。串行是默认的“isolation guarantee”，除非chaincode endorsement策略指定了不同方式。
+
+串行方式要求readset中每个key所对应的的version和sate中同样key的version值相同，拒绝不满足该条件的交易。
+
+ 
+
+3、所有上述验证都通过后，交易被认为有效的或者提交的。这时peer标记把PeerLedger上这个交易对应的bit位标记为1，同时应用blob.endorsement.tran-proposal.writeset更新到区块链状态(如果tran-proposal都是一样的，否则endorsement 策略定义了方法选择更新方式)。
+
+4、如果blob.endorsement的背书策略验证失败，交易变为无效。Peer在peerLedger上的标记为上标记为0。无效的交易不会更改状态。
+
+ 
+
+注意这已经足够满足对所有正常的peer，执行一个给定序列号的deliver事件后有同样的状态。也就是说，在ordering service的保证下，所有的正常peer将会受到一致的序列deliver事件。当endorsement策略是规范的，readset中的版本依赖是确定的，所有的正常peer节点最终都会是一样的结局，无论交易是否在一个有效的区块里。因此所有peer节点按照同样的方式提交、应用同样序列的交易。
+
+ 
+
+背书策略
+
+背书策略是背书一个交易的条件。区块链peer节点有一系列预先设置的策略，用来背书安装指定chaincode的deploy交易引用。背书策略可以参数化，这些参数能够用deploy交易指定（安装chaincode时设定背书策略）。
+
+动态添加背书策略（例如通过在部署chaincode时使用deploy transaction添加）是非常敏感的，由于有限的策略验证时间、决定性、执行和安全保证。因此动态添加背书策略是不允许的，但是未来会支持。
+
+ 
+
+通过背书策略验证交易
+
+一个交易只有根据背书策略签名后才会有效。一个invoke交易首先需要获得满足chaincode背书策略的endorsement，否则不会被提交。这个过程通过client和endorsing peer的交互完成。
+
+ 
+
+背书策略的例子
+
+背书策略可能会包含逻辑表达式，典型条件是让endorsing peer对交易请求进行数字签名。
+
+假设chaincode指定背书节点集合为：
+
+E = {Alice, Bob, Charlie, Dave, Eve, Frank, George}
+
+那么背书策略可能如下面示例：
+
+1、获取所有E中节点对tran-proposal的有效签名
+
+2、获取E中任何一个节点的签名
+
+3、获取E中节点对同一tran-proposal的签名，选择E中节点的条件是：(Alice OR Bob) AND (any two of: Charlie, Dave, Eve, Frank, George).
+
+4、从7个endorsers中任意选择5个进行签名
+
+5、假设endorses有金额或者权重，比如{Alice=49, Bob=15, Charlie=15, Dave=10, Eve=7, Frank=3, George=1}，权重综合为100。背书策略要求获得具有绝大多数金额的背书节点签名（签名节点的集合金额加起来超过50）
+
+6、5中金额的赋值可以是静态的（在chaincode中固定），也可以是动态的（依赖chaincode的状态并且能够在运行中更改）
+
+7、获取（Alice Or Bob）对tran-proposal1的签名以及对tran-proposal2进行签名(any two of: Charlie, Dave, Eve, Frank, George)。Tran-proposal1和tran-proposal2不同点在于endorsing peer和状态更新。
+
+转载自： http://www.cnblogs.com/midfielder/p/7173024.html
