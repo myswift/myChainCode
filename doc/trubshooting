@@ -63,3 +63,10 @@ install npm报错
 ----------------方案
 使用npm 5.0一下版本
 
+
+---------------问题--------------2017.11.24
+运行 ./network_setup.sh 报错：
+make: *** No rule to make target 'release/linux-386',needed by 'release'
+原因：Ubuntu操作系统是32位系统
+重装64位操作系统
+
