@@ -1,0 +1,416 @@
+一个超级账本区块链网络里每个channel的共享配置都是存储在一个配置交易里。每个配置交易通常被简称为configtx。
+Channel 配置有以下重要属性：
+1、有版本标识：配置里的所有元素都有一个关联版本。每次更新配置，版本号都维持最新。另外，每个提交的配置会获得一个序列号。
+2、有权限：配置里的每个元素都有一个关联策略，用来管理是否允许对这个元素进行修改。每一个保存有当前配置副本的实例，都会按照关联策略的内容对新收到的配置改动进行验证权限。
+3、层次性：一个配置根组包含多个子组，并且层次中的每个组都有关联的值和策略。较低层次可以获取上层的策略。
+
+配置分析
+配置作为一个HeaderType_CONFIG类型的交易存储在一个不包含其他交易的区块中。这些区块被称为Configuration Blocks，所有区块中的第一个区块称为genesis block。
+配置的样例存储在fabric/protos/common/configtx.proto。HeaderType_CONFIG类型的Envelope编码ConfigEnvelop信息作为Payload data的值。ConfigEnvelop定义如下：
+message
+ConfigEnvelope {
+    Config
+config = 1;
+    Envelope
+last_update = 2;
+}
+last_update字段在下面的更新配置中有定义，该字段仅用于验证配置。当前提交的配置存在config字段，包含一个Config消息。
+message
+Config {
+    uint64
+sequence = 1;
+    ConfigGroup
+channel_group = 2;
+}
+sequence的值在每次提交配置后加1,channel_group字段是包含该配置的根组。ConfigGroup是一个递归定义的结构，生成一个gruops树，每个组都包含值和策略。ConfigGroup的定义如下：
+message
+ConfigGroup {
+    uint64
+version = 1;
+    map<string,ConfigGroup>
+groups = 2;
+    map<string,ConfigValue>
+values = 3;
+    map<string,ConfigPolicy>
+policies = 4;
+    string
+mod_policy = 5;
+}
+因为ConfigGroup是一个递归结构，有层次概念。接下来我们用go语言例子来表示。
+
+//
+Assume the following groups are defined
+var
+root, child1, child2, grandChild1, grandChild2, grandChild3
+*ConfigGroup
+
+
+//
+Set the following values
+root.Groups["child1"]
+= child1
+root.Groups["child2"]
+= child2
+child1.Groups["grandChild1"]
+= grandChild1
+child2.Groups["grandChild2"]
+= grandChild2
+child2.Groups["grandChild3"]
+= grandChild3
+
+
+//
+The resulting config structure of groups looks like:
+//
+root:
+//
+    child1:
+//
+        grandChild1
+//
+    child2:
+//
+        grandChild2
+//
+        grandChild3
+在config层次结构中，每个组定义了一个层次，每个组有一系列关联的值和策略。值的定义如下：
+message
+ConfigValue {
+    uint64
+version = 1;
+    bytes
+value = 2;
+    string
+mod_policy = 3;
+}
+策略的定义如下：
+message
+ConfigPolicy {
+    uint64
+version = 1;
+    Policy
+policy = 2;
+    string
+mod_policy = 3;
+}
+注意值、策略和组都有一个version和mod_policy字段。一个元素的version在每次更改后递增。mod_policy用来管理修改元素的签名。对于组，更改就是添加或者移除Values、Policies、或者组地图（或者修改mod_policy）。对于Values和Policies，修改就是改变修改Value或者Policy字段（或者修改mod_policy)。每个元素的mod_policy在当前当前元素中有效
+下面是一个定义在Channel.Groups["Application"]中的策略的示例（这里用的是golang语法，因此Channel.Groups["Application"].Policies["policy1"]表示根组Channel的子组Application的Policies里的policy1对应的策略）
+
+policy1对应Channel.Groups["Application"].Policies["policy1"]
+Org1/policy2对应Channel.Groups["Application"].Groups["Org1"].Policies["policy2"]
+/Channel/policy3对应Channel.Policies["policy3"]
+
+注意，如果mod_policy引用了一个不存在的策略，那么该元素不可修改。
+
+CONFIGURATION UPDATES / 更新配置
+
+更新配置是提交一个HeaderType_CONFIG_UPDATE类型的Envelope消息，交易的Payload.data字段是序列化的ConfigUpdateEnvelope，其定义如下：
+
+message
+ConfigUpdateEnvelope {
+    bytes
+config_update = 1;                 // A marshaled ConfigUpdate
+structure
+    repeated
+ConfigSignature signatures = 2; // Signatures over the config_update
+}
+其中signatures字段包含了授权更新配置的签名集，定义如下：
+
+message
+ConfigSignature {
+    bytes
+signature_header = 1; // A marshaled SignatureHeader
+    bytes
+signature = 2;        // Signature over the concatenation
+signatureHeader bytes and config bytes
+}
+signature_header如标准交易所定义，而签名则是signature_header字节和ConfigUpdateEnvelope中的config_update字节的拼接。
+
+ConfigUpdateEnvelope中的config_update字段是序列化的ConfigUpdate，其定义为：
+
+message
+ConfigUpdate {
+    string
+channel_id = 1;     // Which channel this config update is for
+    ConfigGroup
+read_set = 2;  // ReadSet explicitly lists the portion of the config
+which was read, this should be sparse with only Version set
+    ConfigGroup
+write_set = 3; // WriteSet lists the portion of the config which was
+written, this should included updated Versions
+}
+其中channel_id是配置更新所对应的channel ID，该字段是必要，因为它界定了支持本次配置更新的所需的签名范围。
+
+read_set是现有配置的一个子集，其中仅含version字段，ConfigValue.value和ConfigPolicy.policy等其他字段不包含在read_set中。ConfigGroup会map字段组成的子集，以便引用配置树的深层元素。例如，为使Applicationgroup包含到read_set，它的上层（Channelgroup）也必须包含到read_set中，但不必将Channelgroup中所有的key都包括进去，比如Orderer``group或者任何values或policies。
+
+write_set指定了要被修改的那部分配置。由于配置的分层特性，修改深层元素就必须在write_set中包含其上层元素。write_set中的任意元素都会在read_set中指定相同版本的该元素。
+
+例如，给出如下配置：
+
+Channel:
+(version 0)
+    Orderer
+(version 0)
+    Appplication
+(version 3)
+     
+ Org1
+(version 2)
+修改Org1提交的read_set应为：
+
+Channel:
+(version 0)
+   
+Application:
+(version 3)
+对应的write_set应是：
+
+Channel:
+(version 0)
+    Application:
+(version 3)
+     
+  Org1
+(version 3)
+When the CONFIG_UPDATE is received, the orderer computes the resulting CONFIG by doing the following:
+
+接收到CONFIG_UPDATE后，orderer会通过以下步骤计算CONFIG结果：
+
+校验channel_id和read_set，read_set中所有元素必须存在对应的版本。
+
+收集read_set与write_set中版本不一致的元素，计算更新集。
+
+校验更新集中的元素的版本号是否递增1
+
+校验更新集中每个元素，ConfigUpdateEnvelope的签名满足mod_policy。
+
+通过将更新集应用于当前配置，计算该配置的完整新版本
+
+将新配置写成ConfigEnvelope作为CONFIG_UPDATE赋给last_update字段，新的配置赋给config字段，sequence字段自增。
+
+将ConfigEnvelope写成CONFIG类型的Envelope，最终将此作为唯一交易写入配置区块。
+
+当peer（或者任意其他接收Deliver者）接收到这个配置区块后，就会通过将last_update信息应用到当前配置并校验orderer计算的config字段是否包含正确的新配置，来验证该配置是否被正确校验。
+
+PERMITTED CONFIGURATION GROUPS AND VALUES / 组和值得配置许可
+
+有效的配置都是下面配置的子集。在此，用peer.<MSG>表示一个ConfigValue，其value字段是称为<MSG>的序列化后的信息，定义在fabric/protos/peer/configuration.proto。common.<MSG>，msp.<MSG>和orderer.<MSG>分别定义在fabric/protos/common/configuration.proto，fabric/protos/msp/mspconfig.proto和fabric/protos/orderer/configuration.proto。
+
+Note, that the keys {{org_name}} and {{consortium_name}} represent arbitrary names, and indicate an element which may be repeated with different names.
+
+注意，下面的{{org_name}} 和 {{consortium_name}}是任意的名字，表示可以重复使用不同名称的元素。
+
+&ConfigGroup{
+    Groups:
+map<string, *ConfigGroup> {
+       
+"Application":&ConfigGroup{
+            Groups:map<String,
+*ConfigGroup> {
+               
+{{org_name}}:&ConfigGroup{
+                   
+Values:map<string,
+*ConfigValue>{
+                       
+"MSP":msp.MSPConfig,
+                       
+"AnchorPeers":peer.AnchorPeers,
+                    },
+                },
+            },
+        },
+        "Orderer":&ConfigGroup{
+            Groups:map<String,
+*ConfigGroup> {
+               
+{{org_name}}:&ConfigGroup{
+                   
+Values:map<string,
+*ConfigValue>{
+                       
+"MSP":msp.MSPConfig,
+                    },
+                },
+            },
+
+
+            Values:map<string,
+*ConfigValue> {
+               
+"ConsensusType":orderer.ConsensusType,
+               
+"BatchSize":orderer.BatchSize,
+               
+"BatchTimeout":orderer.BatchTimeout,
+               
+"KafkaBrokers":orderer.KafkaBrokers,
+            },
+        },
+       
+"Consortiums":&ConfigGroup{
+            Groups:map<String,
+*ConfigGroup> {
+               
+{{consortium_name}}:&ConfigGroup{
+                   
+Groups:map<string,
+*ConfigGroup> {
+                       
+{{org_name}}:&ConfigGroup{
+                           
+Values:map<string,
+*ConfigValue>{
+                               
+"MSP":msp.MSPConfig,
+                            },
+                        },
+                    },
+                   
+Values:map<string,
+*ConfigValue> {
+                       
+"ChannelCreationPolicy":common.Policy,
+                    }
+                },
+            },
+        },
+    },
+
+
+    Values:
+map<string, *ConfigValue> {
+       
+"HashingAlgorithm":common.HashingAlgorithm,
+       
+"BlockHashingDataStructure":common.BlockDataHashingStructure,
+       
+"Consortium":common.Consortium,
+       
+"OrdererAddresses":common.OrdererAddresses,
+    },
+}
+ORDERER SYSTEM CHANNEL CONFIGURATION / ORDER CHANNEL 配置
+
+ordering系统channel定义了创建channel的ordering参数和consortiums。ordering service必须有一个ordering系统channel，这是被创建的第一个channel。建议不要在ordering系统channel初始配置中定义application部分，但是测试是可以这么做。注意，任何对ordering系统channel有读权限的成员都可以查看所有channel创建，因此channel的访问应受限制。
+
+The ordering parameters are defined as the following subset of config:
+
+ordering参数定义如下：
+
+&ConfigGroup{
+    Groups:
+map<string, *ConfigGroup> {
+        "Orderer":&ConfigGroup{
+            Groups:map<String,
+*ConfigGroup> {
+               
+{{org_name}}:&ConfigGroup{
+                   
+Values:map<string,
+*ConfigValue>{
+                       
+"MSP":msp.MSPConfig,
+                    },
+                },
+            },
+
+
+            Values:map<string,
+*ConfigValue> {
+               
+"ConsensusType":orderer.ConsensusType,
+               
+"BatchSize":orderer.BatchSize,
+               
+"BatchTimeout":orderer.BatchTimeout,
+               
+"KafkaBrokers":orderer.KafkaBrokers,
+            },
+        },
+   
+},
+ordering中的每个组织都在Orderer组下有一个组元素，这个组定义了一个MSP参数，这个参数包含该组织的加密身份信息。Orderer组中的Values决定了ordering节点的功能。他们存在于每个channel中，所以像orderer.BatchTimeout就可在不同channel中指定不同值。
+
+启动时，orderer面对含有很多channel信息的文件系统，orderer通过识别带有consortiums组定义的channel来标识系统channel。consortiums组结构如下。
+
+&ConfigGroup{
+    Groups:
+map<string, *ConfigGroup> {
+       
+"Consortiums":&ConfigGroup{
+            Groups:map<String,
+*ConfigGroup> {
+               
+{{consortium_name}}:&ConfigGroup{
+                   
+Groups:map<string,
+*ConfigGroup> {
+                       
+{{org_name}}:&ConfigGroup{
+                           
+Values:map<string,
+*ConfigValue>{
+                               
+"MSP":msp.MSPConfig,
+                            },
+                        },
+                    },
+                   
+Values:map<string,
+*ConfigValue> {
+                       
+"ChannelCreationPolicy":common.Policy,
+                    }
+                },
+            },
+        },
+    },
+},
+注意，每个consortium定义一组成员，就行ordering组织的组织成员一样。每个consortium也都定义了一个ChannelCreationPolicy，它是一种应用于授权channel创建请求的策略，通常这个值设为ImplicitMetaPolicy，要求channel的新成员签名授权channel创建。有关channel创建更信息的内容，请参阅文档后面的内容。
+
+APPLICATION CHANNEL CONFIGURATION / APP CHANNEL 配置
+
+应用程序配置用于为应用类型交易设计的channel。其定义如下：
+
+&ConfigGroup{
+    Groups:
+map<string, *ConfigGroup> {
+       
+"Application":&ConfigGroup{
+            Groups:map<String,
+*ConfigGroup> {
+               
+{{org_name}}:&ConfigGroup{
+                   
+Values:map<string,
+*ConfigValue>{
+                       
+"MSP":msp.MSPConfig,
+                       
+"AnchorPeers":peer.AnchorPeers,
+                    },
+                },
+            },
+        },
+    },
+}
+就像Orderer部分，每个组织被编码为一个组。然而，app channel不仅有MSP身份信息，每个组织都附加了一个AnchorPeers列表。这个列表允许不同组织的节点彼此联系。
+
+应用程序channel通过对orderer组织和共识选项的编码，以允许对这些参数进行确定性更新，因此包含了orderer系统channel配置的相同Orderer部分。但从应用角度看，这会在很大程度上被忽略。
+
+CHANNEL CREATION / 创建CHANNEL
+
+当Orderer 接收到对一个不存在的channel的CONFIG_UPDATE信息时，orderer就会假设这是个创建channel的请求并执行以下操作：
+
+通过查看高层组中的Consortium值，orderer标识所要执行创建channel请求的consortium（译注：这个词暂时不知翻译成什么好）。
+
+orderer验证Application组中的组织是对应的consortium中组织的一部分，并验证ApplicationGroup的版本是1。
+
+orderer验证consortium是否有成员，新的channel也会有application成员（创建没有成员的consortiums和channel只用于测试）。
+
+orderer从ordering系统channel取得Orderer组，并创建一个包含新指定成员的Application组，并将其mod_policy指定为在consortium config中指定的ChannelCreationPolicy，从而创建一个模板配置。注意，这个策略（mod_policy）是基于新配置的上下文的，因此需要所有成员的策略就是要需要新channel中所有成员的签名，而不是consortium中的所有成员。
+
+orderer用CONFIG_UPDATE更新这个模板配置。因为CONFIG_UPDATE用于Application组（其版本是1）的修改，所以配置码根据ChannelCreationPolicy验证这些更新。如果channel创建包含任何其它修改，例如修改单个组织的锚节点，则调用该元素的相应mod策略。
+
+带有新channel配置的CONFIG交易被包装并通过order系统channel发送到ordering，ordering之后channel就创建完成。
