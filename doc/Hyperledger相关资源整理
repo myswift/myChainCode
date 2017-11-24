@@ -24,3 +24,6 @@ IBM Open Blockchain 白皮书节选 http://8btc.com/article-2891-1.html
 
 
 一个简单支持UTXO模型和Account模型的数字货币,基于Hyperledger Chaincode。https://github.com/hydrusio/hydruscoin
+
+REST APIs 
+https://github.com/hyperledger/fabric-samples/tree/release/balance-transfer
