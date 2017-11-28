@@ -70,3 +70,13 @@ make: *** No rule to make target 'release/linux-386',needed by 'release'
 原因：Ubuntu操作系统是32位系统
 重装64位操作系统
 
+--------------fabric 启动报错----------------2017.11.28
+2017-11-28 09:29:39.499 UTC [msp/identity] Sign -> DEBU 00f Sign: digest: BFBC9F5DFAF22ADE195DD747C762084E2521A9F4510A442AFFA7486416D819DA 
+Error: Got unexpected status: BAD_REQUEST
+Usage:
+  peer channel create [flags]
+原因：类似这样的错误，是因为channel已经建立，命名冲突
+解决办法：移除docker，重新启动。执行最后一个命令即可 
+1）删除一个容器 docker rm 
+2）强制删除一个容器 docker rm -f 
+3）强制删除全部容器 docker rm -f $(docker ps -aq)
