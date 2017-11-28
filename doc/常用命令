@@ -1,0 +1,7 @@
+----------------------linux----------------
+查看操作系统版本
+cat /etc/redhat-release
+
+------------------docker--------------------
+systemctl start docker
+systemctl stop docker
