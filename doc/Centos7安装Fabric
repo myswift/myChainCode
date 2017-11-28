@@ -13,8 +13,10 @@ nameserver 8.8.8.8
 git config --global http.postBuffer 524288000
 
 第一步、安装配置容器docker
-从daocloud安装docker:	yum install docker-ce-17.06.0.ce-1.el7.centos
-        （ubuntu下安装：curl -sSL https://get.daocloud.io/docker | sh  ） （不行多试几次）
+列出可安装版本： yum list docker-ce.x86_64  --showduplicates |sort -r
+从daocloud安装docker:	 yum -y install docker-ce （安装最新版本）
+       （指定版本安装：	yum install 17.09.0.ce-1.el7.centos）
+        （ubuntu下安装：curl -sSL https://get.daocloud.io/docker | sh  ） （不行多试几次）
 添加当前用户到docker:	sudo usermod -aG docker root
 修改 Docker 服务配置:	sudo vi /etc/sysconfig/docker  （Ubuntu: /etc/default/docker)     
 添加DOCKER_OPTS="$DOCKER_OPTS -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --api-cors-header='*'"
