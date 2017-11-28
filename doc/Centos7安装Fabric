@@ -1,0 +1,119 @@
+
+修改DNS：
+vi /etc/sysconfig/network-scripts/ifcfg-eth0
+添加：
+nameserver 202.96.134.133
+nameserver 8.8.8.8
+
+安装crul:		sudo apt install curl
+
+如果git默认没有安装也执行安装：sudo apt install git
+
+设置git参数：
+git config --global http.postBuffer 524288000
+
+第一步、安装配置容器docker
+从daocloud安装docker:	yum install docker-ce-17.06.0.ce-1.el7.centos
+        （ubuntu下安装：curl -sSL https://get.daocloud.io/docker | sh  ） （不行多试几次）
+添加当前用户到docker:	sudo usermod -aG docker root
+修改 Docker 服务配置:	sudo vi /etc/sysconfig/docker  （Ubuntu: /etc/default/docker)     
+添加DOCKER_OPTS="$DOCKER_OPTS -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --api-cors-header='*'"
+设置国内Daocloud的Docker加速器地址：curl -sSL https://get.daocloud.io/daotools/set_mirror.sh | sh -s http://8d37c888.m.daocloud.io
+重启docker:		sudo service docker restart
+测试：
+docker -v
+docker pull hello-world
+docker run hello-world
+
+第二步、安装配置服务编排docker-compse
+
+安装pip:		yum install python-pip  （sudo apt-get install python-pip）
+安装docker compose:	 pip install docker-compose
+安装目录：/usr/bin/docker-compose
+### ubuntu： curl sudo apt-ge-L https://get.daocloud.io/docker/compose/releases/download/1.16.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
+修改权限：		chmod +x /usr/bin/docker-compose
+查看安装的版本：docker-compose -v
+
+第三步、安装配置GO
+
+wget --no-check-certificate  https://dl.gocn.io/golang/1.9.2/go1.9.2.linux-amd64.tar.gz
+https://storage.googleapis.com/golang/go1.9.linux-amd64.tar.gz   （需要安装SSL）
+或者使用国内镜像： https://dl.gocn.io/golang/1.9.2/go1.9.2.linux-amd64.tar.gz
+
+sudo tar -C /usr/local -xzf go1.9.linux-amd64.tar.gz
+
+sudo tar -C /usr/local -xzf go1.9.2.linux-amd64.tar.gz
+
+vi /etc/profile
+
+export PATH=$PATH:/usr/local/go/bin 
+export GOROOT=/usr/local/go 
+export GOPATH=$HOME/go 
+export PATH=$PATH:$HOME/go/bin
+
+source /etc/profile
+cd ~
+mkdir go
+
+go version
+vim testgo.go （没有就安装很简单）
+内容：g
+package main
+ 
+    import (
+        "fmt"
+         "runtime"
+    )
+
+    func main() {
+        fmt.Println("Hellow World!", runtime.Version())
+    }
+	
+运行：go run testgo.go
+
+第四步、GIT手工下载fabric
+
+mkdir -p ~/go/src/github.com/hyperledger
+cd ~/go/src/github.com/hyperledger
+git clone https://github.com/hyperledger/fabric.git      （比较慢哈）
+cd ~/go/src/github.com/hyperledger/fabric
+git init
+git checkout -b v1.0.0
+cd ~/go/src/github.com/hyperledger/fabric/examples/e2e_cli/
+source download-dockerimages.sh -c x86_64-1.0.0 -f x86_64-1.0.0 
+
+第五步、以自动脚本的方式启动和关闭fabric服务样例
+
+启动fabric       ./network_setup.sh up
+
+（启动失败。问题hyperledger目录写成了hyperledge）
+
+OK了之后，以下尝试一些简单操作：
+另行打开一个命令行   docker exec -it cli bash
+查询A账户余额   peer chaincode query -C mychannel -n mycc -c '{"Args":["query","a"]}'     查询结果应该有90
+把a账户的余额再转20元给b账户 
+peer chaincode invoke -o orderer.example.com:7050  --tls true --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem  -C mychannel -n mycc -c '{"Args":["invoke","a","b","20"]}'
+再查询a账户看是否剩下70了
+
+
+退出cli容器       exit 
+cd ~/go/src/github.com/hyperledger/fabric/examples/e2e_cli
+关闭fabric./network_setup.sh down
+
+第六步、安装配置npm\node并用node客户端sdk连接操作区块链
+apt install npm
+sudo npm install npm@latest -g    （升级为最新版本）
+npm install -g n
+n latest
+
+如果本地安装最新版本，请忽略上述步骤
+
+
+启动fabric报错：
+Error: Error endorsing chaincode: rpc error: code = Unknown desc = Error starting container: API error (500): {"message":"oci runtime error: container_linux.go:262: starting container process caused \"process_linux.go:339: container init caused \\\"read init-p: connection reset by peer\\\"\"\n"}
+docker-17.06.0-ce部署在centos7.2（ kernel ：3.10.0-327.el7.x86_64） 时，针对上述情况有1个bug，下发容器指定内存时（matathon下发容器指定了内存）时会触发此bug。
+解决方案：
+ github上已给出解决方案：This should be cleared up if you update to the latest patch level (-514). Alternatively we will also be releasing a fix with 17.06.1 (docker/docker-ce#102)
+
+
+
