@@ -1,0 +1,135 @@
+Anchor Peer
+
+在一个channel上可以被所有其他peer发现的peer，channel上的每个成员都有一个anchor Peer(或多个anchor peer 来防止单点故障)，允许属于不同成员的peer发现chnnel上的所有现有peer。
+
+Block（块）
+
+与channel上的前一个块加密链接的有序交易集。
+
+Chain（链）
+
+账本链是一个交易日志，结构化为哈希链接的交易块。peer从ordering服务接收交易块，基于endorsement策略和并发冲突将块的事务标记为有效或无效，并将块附加到peer的文件系统上的散列链。
+
+Chaincode（链式码）
+
+Chaincode是在账本上运行的软件，用于编码资产和用于修改资产的交易指令（业务逻辑）。
+
+Channel（信道）
+
+Channel是覆盖在Fabric网络上的私有区块链，允许数据隔离和机密性。在channel中的peer之间可以共享特定channel的账本，并且交易方必须被正确地认证到channel以便与其交互。通道由配置块（Configuration-Block）定义 。
+
+Commitment（提交）
+
+Channel每个peer验证有序的交易块，然后将块提交（写入/追加）到其通道账本的副本。peer还将每个块中的每个交易标记为有效或无效。
+
+Concurrency Control Version Check（并发控制版本检查）
+
+并发控制版本检查是一种在channel上的peer之间保持状态同步的方法。peer并行执行交易，并且在对账本提交之前，peer检查在执行时读取的数据未更改。如果为交易读取的数据在执行时间和提交时间之间更改，则发生并发控制版本检查冲突，并且交易在账本上标记为无效，并且状态数据库中的值不更新。
+
+Configuration Block（配置块）
+
+包含定义系统链（ordering服务）或channel的成员和策略的配置数据。对channel或整个网络（例如，成员离开或加入）的任何配置修改将导​​致新的配置块被附加到适当的链。该块将包含生成块的内容，加上delta。
+
+Consensus（共识）
+
+一个更广泛的术语，覆盖整个交易流，用于生成顺序的协议，并确认构成块的交易集合的正确性。
+
+Current State（当前状态）
+
+账本的当前状态表示其链式交易日志中包含的所有键的最新值。peer将最新值提交到包括在处理块中的每个有效交易的账本当前状态。由于当前状态表示信道已知的所有最新密钥值，所以它有时被称为世界状态(World State)。Chaincode针对当前状态数据执行交易提议。
+
+Dynamic Membership（动态成员资格）
+
+Fabric支持添加/删除成员，peer和ordering服务节点，而不会影响整个网络的可操作性。当业务关系调整并且由于各种原因需要添加/移除实体时，动态成员资格至关重要。
+
+Endorsement（背书）
+
+指特定peer执行交易并向生成交易proposal的客户端应用程序返回YES/NO响应的过程。Chaincode应用程序具有相应的endorsement策略，其中指定了endorser。
+
+Endorsement policy（背书策略）
+
+定义必须执行附加到特定chaincode应用程序的交易的通道上的peer，以及响应（代言）的必需组合。(Defines the peer nodes on a channel that must execute transactions attached to a specific chaincode application, and the required combination of responses (endorsements).)策略可以要求一个交易被endorse的最少endorser数量或最少peer百分比，或被分配到特定chaincode应用程序的所有endorer。策略可以由endorser基于应用和抵御不当行为（有意或无意）的期望水平来策划。还需要一个用于部署交易的明确的en dorsement polity策略，部署交易可以安装新的chaincode。
+
+Genesis Block
+
+用于初始化区块链网络或channel的配置块，也用作链上的第一个块。
+
+Gossip Protocol
+
+Gossip数据传播协议执行三个功能：1）管理peer发现和channel成员资格; 2）在该信道上的所有peer上传播账本数据; 3）在通道上的所有peer之间同步账本状态。有关更多详细信息，请参阅Gossip主题。
+
+Initialize（初始化）
+
+一种初始化chaincode应用程序的方法。
+
+Install（安装）
+
+在peer的文件系统上放置chaincode的过程。
+
+Instantiate（实例化）
+
+启动chaincode容器的过程。
+
+Invoke（调用）
+
+用于调用chaincode函数。调用作为交易提议被捕获，然后通过模块化的endorsement，排序，验证，提交流程。invoke的结构是一个函数和一个参数数组。
+
+Leading Peer
+
+每个成员可以在其订阅的每个信道上拥有多个peer。这些peer中的一个用作信道的Leading Peer，以便代表该成员与网络ordering服务进行通信。ordering服务将“传递”块到信道上的Leading Peer，然后将它们分发到同一成员集群中的其他peer。
+
+Ledger（账本）
+
+账本是由信道上的每个peer维护的信道链和当前状态数据。
+
+Member（成员）
+
+拥有网络的唯一根证书的合法独立实体。网络组件（如peer节点和应用程序客户端）将链接到成员。
+
+Membership Service Provider（成员服务提供商）
+
+成员服务提供商（MSP）是指为客户端提供凭证的系统的抽象组件，以及供他们参与Hyperledger Fabric网络的peer。客户端使用这些凭证来验证其交易，并且peer使用这些凭证来验证交易处理结果（endorsement）。虽然与交易处理组件紧密连接，但是该接口旨在定义成员资格服务组件的方式是替换实现可以平滑的插入不修改系统的交易处理组件的核心。（While strongly connected to the transaction processing components of the systems, this interface aims to have membership services components defined, in such a way that alternate implementations of this can be smoothly plugged in without modifying the core of transaction processing components of the system.）
+
+Membership Services（成员服务）
+
+成员服务在授权的区块链网络上认证，授权和管理身份。在peer和orders中运行的成员资格服务代码都认证和授权区块链操作。它是成员服务提供商（MSP）抽象的基于PKI的实现。 
+该fabric-ca组件是用于管理身份的成员资格服务的实现。特别是，它处理登记证书和交易证书的发放和撤销。 
+注册证书是长期身份证书; 交易证书是短期身份凭证，其是匿名的和不可链接的。
+
+Ordering Service（排序服务）
+
+定义的将交易排序到块中的节点集合。ordering服务独立于peer进程存在并且以先来先服务的方式对网络上的所有信道进行排序交易。ordering服务旨在支持超出现成的SOLO和Kafka品种的可插拔实现。ordering服务是整个网络的公共绑定; 它包含绑定到每个成员的加密身份材料。
+
+Peer（对等节点）
+
+维护账本并运行chaincode容器以便对账本执行读取/写入操作的网络实体。peer点由成员拥有和维护。
+
+Policy（策略）
+
+有支持，验证，块提交，chaincode管理和网络/channel管理的策略。
+
+Proposal
+
+针对某个信道上的特定peer的endorsement请求。每个提议是实例化或调用（读/写）请求。 
+A request for endorsement that is aimed at specific peers on a channel. Each proposal is either an instantiate or an invoke (read/write) request.
+
+Query
+
+查询请求针对当前状态的键的值。
+
+Software Development Kit (SDK)（软件开发工具包）
+
+Hyperledger Fabric客户端SDK提供了一个结构化的库，供开发人员编写和测试chaincode应用程序。SDK通过标准接口是完全可配置和可扩展的。组件（包括签名的加密算法，日志记录框架和状态存储）可以轻松地交换出SDK。SDK API使用gRPC上的协议缓冲区来进行事务处理，成员服务，节点遍历和事件处理应用程序，以在整个架构上进行通信。SDK有多种版本 - Node.js，Java。和Python。
+
+State Database（状态数据库）
+
+当前状态数据存储在状态数据库中，以便从chaincode进行有效读取和查询。这些数据库包括levelDB和couchDB。
+
+System Chain（系统链）
+
+包含在系统级定义网络的配置块。系统链存在于ordering服务中，类似于通道，具有包含诸如以下信息的初始配置：MSP信息，策略和配置细节。对整个网络的任何改变（例如，添加新的组织加入或新的排序节点）将导致将新的配置块添加到系统链。 
+系统链可以被认为是信道或信道组的公共绑定。例如，一组金融机构可以形成一个联盟（通过系统链表示），然后进行创建相对于其结盟的和不同业务议程的渠道。
+
+Transaction（交易）
+
+调用或实例化操作。调用是从分类帐读取/写入数据的请求。实例化是在peer上启动chaincode容器的请求。
