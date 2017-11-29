@@ -1,0 +1,22 @@
+couchdb配置启动方式：
+1， 
+couchDB配置启动	./network_setup.sh up mychannel 10000 couchdb 
+访问：http://60.205.224.64:5984/_utils
+  
+2，
+官方已经提供了多个Docker-compose文件，如果我们使用的是./network_setup.sh up命令，那么启用的就是docker-compose-cli.yaml这个文件。如果要基于这个yaml文件启用CouchDB的Peer，则打开该文件，并编辑其中的Peer节点，改为如下的形式：
+
+peer0.org1.example.com: 
+  container_name: peer0.org1.example.com 
+  environment: 
+    - CORE_LEDGER_STATE_STATEDATABASE=CouchDB 
+    - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=192.168.100.129:5984 
+    - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin 
+    - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=password 
+  extends: 
+    file:  base/docker-compose-base.yaml 
+    service: peer0.org1.example.com
+
+这里的192.168.100.129:5984是我映射CouchDB后的Linux的IP地址和IP。然后是设置用户名和密码。把4个Peer的配置都改好后，保存，我们试着启用Fabric：
+
+./network_setup.sh up
