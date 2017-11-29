@@ -1,0 +1,13 @@
+1，确定是否可以使用。BPFT在Fabric0.6中以插件的方式安装运行。Fabric1.0中只有Solo和Kafka两种可选的共识方式，去掉了BPFT方式。
+2，couchDB配置启动	./network_setup.sh up mychannel 10000 couchdb 
+	访问：http://60.205.224.64:5984/_utils
+3，了解征信区块链业务需求
+4，了解竞品公信宝
+
+
+注：
+network_setup.sh参数
+UP_DOWN="$1"
+CH_NAME="$2"
+CLI_TIMEOUT="$3"
+IF_COUCHDB="$4"  //couchdb
