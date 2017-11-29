@@ -20,3 +20,7 @@ peer0.org1.example.com:
 这里的192.168.100.129:5984是我映射CouchDB后的Linux的IP地址和IP。然后是设置用户名和密码。把4个Peer的配置都改好后，保存，我们试着启用Fabric：
 
 ./network_setup.sh up
+
+
+文档资料：
+http://www.cnblogs.com/studyzy/p/7101136.html
