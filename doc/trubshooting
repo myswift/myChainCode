@@ -88,3 +88,10 @@ Failed to start docker.service: Unit docker.service is masked.
 systemctl unmask docker.service
 systemctl unmask docker.socket
 systemctl start docker.service
+
+---------------------docker执行报错---------------2017.11.30-----
+安装完成后docker的ps pull search run命令都会报这个错 Cannot connect to the Docker daemon. Is the docker daemon running on this host?
+解决办法：
+You need to add user into docker group. by 'sudo gpasswd -a xxxx docker' (xxx is your user name)
+Then restart your computer.
+This problem should be solved.
