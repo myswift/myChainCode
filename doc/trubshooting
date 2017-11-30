@@ -80,3 +80,11 @@ Usage:
 1）删除一个容器 docker rm 
 2）强制删除一个容器 docker rm -f 
 3）强制删除全部容器 docker rm -f $(docker ps -aq)
+
+---------------------docker启动失败--------------2017.11.30--------
+ sudo service docker start
+Failed to start docker.service: Unit docker.service is masked.
+解决办法：
+systemctl unmask docker.service
+systemctl unmask docker.socket
+systemctl start docker.service
