@@ -98,3 +98,4 @@ This problem should be solved.
 
 docker-compose 报错：
 安装完docker，docker-compose默认没有被安装，故需手动安装。 安装时需注意docker-compose需要docker支持的版本 若直接下载最新的docker-compose有可能会和你的docker不匹配，当执行docker-compose时，会报类似以下错误 [root@bugzilla50g second]# docker-compose up -d ERROR: The Docker Engine version is less than the minimum required by Compose. Your current project require .
+解决办法：安装指定版本：pip install docker-compose==1.16.1
