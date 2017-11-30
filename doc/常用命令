@@ -13,3 +13,15 @@ mount -t vboxsf pub /home/jack/share
 ------------------docker--------------------
 systemctl start docker
 systemctl stop docker
+
+docker images：列出本地所有镜像
+常用命令列表：
+https://www.cnblogs.com/xiadongqing/p/6144053.html
+
+通用：
+操作	命令	示例
+查看 docker 版本	docker version	docker version
+查看 docker 信息	docker info	docker info
+查看某命令 help 信息	docker help [command]	docker help attach
+查看 docker help 信息	docker --help	docker --help
+container 相关：
