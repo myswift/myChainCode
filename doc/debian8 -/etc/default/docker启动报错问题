@@ -1,0 +1,101 @@
+解决 debian8 中 /etc/default/docker 无效问题
+
+环境：Debian 8 + Docker 1.6 
+问题：
+
+/etc/default/docker 中 DOCKER_OPTS 参数无效
+/etc/default/docker didn’t work
+DOCKER_OPTS do not work
+过程
+
+一开始，只是因为搭了一个 registry，想添加 --insecure-registry=192.168.11.33:5000 作为 docker daemon 的启动参数。做法是在 /etc/default/docker 中添加 DOCKER_OPTS="$DOCKER_OPTS --insecure-registry=192.168.11.33:5000" 这样一行设置，设置 DOCKER_OPTS 参数。然后用 service 或 systemctl 重启 docker。
+
+然而，丝毫没有起作用。docker client 对 registry 的访问都会因为 tls 失败。如果查看 docker 的启动参数：
+
+➜  ~  ps -ef | grep docker
+root      11085      1  0 20:32 ?        00:00:00 /usr/bin/docker -d -H fd://
+angryro+  11148   1554  0 20:33 pts/1    00:00:00 grep --color=auto docker
+1
+2
+3
+会发现，DOCKER_OPTS 参数根本没有被读取。在 github 上找到这个 issue。操作系统也是 debian，docker 1.6.2 版本。原因是 /lib/systemd/system/docker.service 中根本没有设置 EnvironmentFile 变量，意味着 /etc/docker/default 根本没有被读取。 issue 里面的修改方法是，修改 /lib/systemd/system/docker.service：
+
+[Unit]
+Description=Docker Application Container Engine
+Documentation=http://docs.docker.com
+After=network.target docker.socket
+Requires=docker.socket
+
+[Service]
+EnvironmentFile=-/etc/default/docker  #这里添加了 EnvironmentFile 参数
+ExecStart=/usr/bin/docker -d $DOCKER_OPTS -H fd://  # 增加了 $DOCKER_OPTS
+MountFlags=slave
+LimitNOFILE=1048576
+LimitNPROC=1048576
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
+
+EnvironmentFile 变量后面 =- 表示 ignore_errors=yes 的意思，$DOCKER_OPTS 添加到 ExecStart 里意思应该是让 systemd 把 EnvironmentFile 里的 $DOCKER_OPTS 作为 docker 的启动参数。然而这对于我并不起作用，如果成功的同学请告知我一下。错误的原因是 $DOCKER_OPTS 好像没有被解析，docker 直接以 /usr/bin/docker -d $DOCKER_OPTS -H fd:// 启动，而不是 /usr/bin/docker -d --insecure-registry=192.168.11.33:5000 -H fd://，所以 docker 会有启动的错误。
+
+$ ps -ef | grep docker          # 查看 docker 是否启动及启动参数
+$ sudo systemctl status docker  # 查看 docker 启动状态
+$ sudo journalctl -u docker     # 查看 docker 启动日志
+1
+2
+3
+看到 docker 关于 systemd 的文档，here. 这里其实已经给了一个用 $OPTIONS 参数启动的例子，只是当时比较执着，结果最后在一个 stackoverflow 上看到用 $OPTIONS 启动的，我才这样修改成功。记下下面几条调试的命令：
+
+$ sudo systemctl show docker | grep EnvironmentFile
+EnvironmentFile=-/etc/sysconfig/docker (ignore_errors=yes)
+$ sudo systemctl status docker | grep Loaded
+   Loaded: loaded (/usr/lib/systemd/system/docker.service; enabled)
+$ sudo grep EnvironmentFile /usr/lib/systemd/system/docker.service
+EnvironmentFile=-/etc/default/docker
+
+解决方案
+
+在 /etc/default/docker 用 OPTIONS 选项，并相应修改 /lib/systemd/system/docker.service：
+
+➜  ~  cat /etc/default/docker      
+# Docker Upstart and SysVinit configuration file
+
+# Customize location of Docker binary (especially for development testing).
+#DOCKER="/usr/local/bin/docker"
+
+# Use DOCKER_OPTS to modify the daemon startup options.
+#DOCKER_OPTS="--dns 8.8.8.8 --dns 8.8.4.4"
+
+# If you need Docker to use an HTTP proxy, it can also be specified here.
+#export http_proxy="http://127.0.0.1:3128/"
+
+# This is also a handy place to tweak where Docker's temporary files go.
+#export TMPDIR="/mnt/bigdrive/docker-tmp"
+OPTIONS=--insecure-registry 192.168.11.33:5000
+
+➜  ~  cat /lib/systemd/system/docker.service 
+[Unit]
+Description=Docker Application Container Engine
+Documentation=http://docs.docker.com
+After=network.target docker.socket
+Requires=docker.socket
+
+[Service]
+EnvironmentFile=-/etc/default/docker
+ExecStart=/usr/bin/docker -d -H fd:// $OPTIONS
+MountFlags=slave
+LimitNOFILE=1048576
+LimitNPROC=1048576
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
+
+➜  ~  sudo systemctl daemon-reload 
+
+➜  ~  sudo systemctl restart docker
+
+➜  ~  ps -ef | grep docker
+root       5516      1 40 21:10 ?        00:00:02 /usr/bin/docker -d -H fd:// --insecure-registry 192.168.11.33:5000
+angryro+   5552   1573  0 21:10 pts/0    00:00:00 grep --color=auto docker
