@@ -99,3 +99,8 @@ This problem should be solved.
 docker-compose 报错：
 安装完docker，docker-compose默认没有被安装，故需手动安装。 安装时需注意docker-compose需要docker支持的版本 若直接下载最新的docker-compose有可能会和你的docker不匹配，当执行docker-compose时，会报类似以下错误 [root@bugzilla50g second]# docker-compose up -d ERROR: The Docker Engine version is less than the minimum required by Compose. Your current project require .
 解决办法：安装指定版本：pip install docker-compose==1.16.1
+
+---------------------目录没有权限-----------------2017.12.4----
+安装fabric时和运行 ./network_setup.sh使用不同用户
+报错：目录没有权限
+解决办法：使用同一用户
