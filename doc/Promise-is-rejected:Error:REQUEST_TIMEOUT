@@ -1,0 +1,21 @@
+测试balance-transfer网络执行testAPIs.sh时可能出现下面的错误
+
+error: [Peer.js]: sendProposal - timed out after:45000
+error: [Peer.js]: sendProposal - timed out after:45000
+error: [client-utils.js]: sendPeersProposal - Promise is rejected: Error: REQUEST_TIMEOUT
+    at Timeout._onTimeout (/home/fangyincheng/fabric-samples/balance-transfer/node_modules/fabric-client/lib/Peer.js:100:19)
+    at ontimeout (timers.js:386:14)
+    at tryOnTimeout (timers.js:250:5)
+    at Timer.listOnTimeout (timers.js:214:5)
+error: [client-utils.js]: sendPeersProposal - Promise is rejected: Error: REQUEST_TIMEOUT
+    at Timeout._onTimeout (/home/fangyincheng/fabric-samples/balance-transfer/node_modules/fabric-client/lib/Peer.js:100:19)
+    at ontimeout (timers.js:386:14)
+    at tryOnTimeout (timers.js:250:5)
+    at Timer.listOnTimeout (timers.js:214:5)
+[2017-08-25 06:07:13.509] [ERROR] instantiate-chaincode - instantiate proposal was bad
+[2017-08-25 06:07:13.510] [ERROR] instantiate-chaincode - instantiate proposal was bad
+[2017-08-25 06:07:13.510] [ERROR] instantiate-chaincode - Failed to send instantiate Proposal or receive valid response. Response null or status is not 200. exiting...
+[2017-08-25 06:07:13.510] [ERROR] instantiate-chaincode - Failed to order the transaction. Error code: undefined
+
+解决方案：
+改，/home/fangyincheng/fabric-samples/balance-transfer/node_modules/fabric-client/config/default.json文件下的45000的超时时间为更长，笔者改为100000便可以了
