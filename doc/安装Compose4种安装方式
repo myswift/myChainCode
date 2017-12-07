@@ -1,0 +1,32 @@
+# 方法一：
+$ curl -L https://github.com/docker/compose/releases/download/1.8.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
+$ chmod +x /usr/local/bin/docker-compose
+
+# Linux下等效于
+$ curl -L https://github.com/docker/compose/releases/download/1.8.1/docker-compose-Linux-x86_64 > /usr/local/bin/docker-compose; chmod +x /usr/local/bin/docker-compose
+
+# 方法二：使用pip安装，版本可能比较旧
+$ yum install python-pip python-dev
+$ pip install docker-compose
+
+# 方法三：作为容器安装
+$ curl -L https://github.com/docker/compose/releases/download/1.8.0/run.sh > /usr/local/bin/docker-compose
+$ chmod +x /usr/local/bin/docker-compose
+
+# 方法四：离线安装
+# 下载[docker-compose-Linux-x86_64](https://github.com/docker/compose/releases/download/1.8.1/docker-compose-Linux-x86_64)，然后重新命名添加可执行权限即可：
+$ mv docker-compose-Linux-x86_64 /usr/local/bin/docker-compose;
+$ chmod +x /usr/local/bin/docker-compose
+# 百度云地址： http://pan.baidu.com/s/1slEOIC1 密码: qmca
+# docker官方离线地址：https://dl.bintray.com/docker-compose/master/
+
+安装完成后可以查看版本：
+# docker-compose --version
+docker-compose 1.8.1
+升级
+
+如果你使用的是 Compose 1.2或者早期版本，当你升级完成后，你需要删除或者迁移你现有的容器。这是因为，1.3版本， Composer 使用 Docker 标签来对容器进行检测，所以它们需要重新创建索引标记。
+卸载
+$ rm /usr/local/bin/docker-compose
+# 卸载使用pip安装的compose
+$ pip uninstall docker-compose
