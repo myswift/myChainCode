@@ -30,3 +30,6 @@ docker-compose 1.8.1
 $ rm /usr/local/bin/docker-compose
 # 卸载使用pip安装的compose
 $ pip uninstall docker-compose
+
+
+参考： https://www.cnblogs.com/52fhy/p/5991344.html
