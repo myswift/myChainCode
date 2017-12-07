@@ -5,7 +5,7 @@ vi /etc/sysconfig/network-scripts/ifcfg-eth0
 nameserver 202.96.134.133
 nameserver 8.8.8.8
 
-安装crul:		sudo apt install curl
+安装crul:	yum install git （sudo apt install curl）
 
 如果git默认没有安装也执行安装：sudo apt install git
 
