@@ -31,7 +31,8 @@ docker run hello-world
 第二步、安装配置服务编排docker-compse
 
 安装pip:		yum install python-pip  （sudo apt-get install python-pip）
-安装docker compose:	 pip install docker-compose
+安装docker compose:	 pip install docker-compose（不一定时最新版本）
+	curl -L https://github.com/docker/compose/releases/download/1.17.0/docker-compose-Linux-x86_64 -`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
 安装目录：/usr/bin/docker-compose
 ### ubuntu： curl sudo apt-ge-L https://get.daocloud.io/docker/compose/releases/download/1.16.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
 修改权限：		chmod +x /usr/bin/docker-compose
