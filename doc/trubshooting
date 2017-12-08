@@ -104,3 +104,12 @@ docker-compose 报错：
 安装fabric时和运行 ./network_setup.sh使用不同用户
 报错：目录没有权限
 解决办法：使用同一用户
+
+---------------------执行集群中yaml文件报错---2017.12.8---
+UnicodeDecodeError: 'ascii' codec can't decode byte 0xe7 in position 0: ordinal not in range(128)
+解决方案
+import sys 
+reload(sys) 
+sys.setdefaultencoding('utf-8')
+代码开头加入如上内容，即可！
+
