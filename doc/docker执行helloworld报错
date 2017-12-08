@@ -1,0 +1,21 @@
+docker pull hello-world
+Using default tag: latest
+Warning: failed to get default registry endpoint from daemon (Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get http://%2Fvar%2Frun%2Fdocker.sock/v1.34/info: dial unix /var/run/docker.sock: connect: permission denied). Using system default: https://index.docker.io/v1/
+Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Post http://%2Fvar%2Frun%2Fdocker.sock/v1.34/images/create?fromImage=hello-world&tag=latest: dial unix /var/run/docker.sock: connect: permission denied
+zpc@zpc:~$ cat /etc/group | grep ^docker
+
+
+报错文件的权限展示，可以看到其属主为root，权限为rw，可读可写；其属组为docker，权限为rw，可读可写。如果要当前用户可直接读取该文件，那么我们就为当前用户添加到docker属组即可。
+
+如果还没有 docker group 就添加一个：
+
+sudo groupadd docker
+将用户加入该 group 内。然后退出并重新登录就生效啦。
+
+sudo gpasswd -a ${USER} docker
+重启 docker 服务
+
+sudo service docker restart
+切换当前会话到新 group 或者重启 X 会话
+
+newgrp - docker
