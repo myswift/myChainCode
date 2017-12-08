@@ -105,6 +105,20 @@ docker-compose 报错：
 报错：目录没有权限
 解决办法：使用同一用户
 
+
+--------------------------docker执行hello-world报错----2017.12.7
+Using default tag: latest
+Warning: failed to get default registry endpoint from daemon (Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get http://%2Fvar%2Frun%2Fdocker.sock/v1.34/info: dial unix /var/run/docker.sock: connect: permission denied). Using system default: https://index.docker.io/v1/
+Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Post http://%2Fvar%2Frun%2Fdocker.sock/v1.34/images/create?fromImage=hello-world&tag=latest: dial unix /var/run/docker.sock: connect: permission denied
+解决方案：
+sudo groupadd docker
+将用户加入该 group 内。然后退出并重新登录就生效啦。
+
+sudo gpasswd -a ${USER} docker
+重启 docker 服务
+
+sudo service docker restart
+切换当前会话到新 group 或者重启 X 会话
 ---------------------执行集群中yaml文件报错---2017.12.8---
 UnicodeDecodeError: 'ascii' codec can't decode byte 0xe7 in position 0: ordinal not in range(128)
 解决方案
