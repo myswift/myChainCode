@@ -22,3 +22,20 @@ restarting：容器的进程正在重启过程中
 exited：上图中的 stopped 状态，表示容器之前运行过但是现在处于停止状态（要区别于 created 状态，它是指一个新创出的尚未运行过的容器）。可以通过 start 命令使其重新进入 running 状态
 destroyed：容器被删除了，再也不存在了
 
+
+Ubuntu 14.04 上安装 Docker
+sudo apt-get update
+sudo apt-get install apt-transport-https ca-certificates
+sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+编辑 /etc/apt/sources.list.d/docker.list 文件，添加 deb https://apt.dockerproject.org/repo ubuntu-trusty main
+sudo apt-get update
+sudo apt-get purge lxc-docker
+apt-cache policy docker-engine
+apt-get upgrade
+sudo apt-get install linux-image-extra-$(uname -r) linux-image-extra-virtual
+sudo apt-get install docker-engine
+至此，安装过程完成。
+
+运行 sudo service docker start 启动 Docker 守护进程。
+运行 docker version 查看 Docker 版本
+启动第一个Docker 容器 docker run hello-world
