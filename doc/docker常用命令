@@ -7,12 +7,18 @@ docker unpause web31 #继续容器
 
 docker rm newweb31 #删除容器
 
+docker rm -f $(docker ps -aq)
+
 查看docker运行状态
 docker inspect --format='{{.State.Status}}'  orderer.example.com
 查看docker日志
  docker logs orderer.example.com
  命令的输出中查看其详细状态：
  docker inspect orderer.example.com 
+ 
+ 如果希望服务在后台运行，可以使用-d选项（也就是detach）
+ 
+ docker-compose up -d
  
 一个容器在某个时刻可能处于以下几种状态之一：
 created：已经被创建 （使用 docker ps -a 命令可以列出）但是还没有被启动 （使用 docker ps 命令还无法列出）
