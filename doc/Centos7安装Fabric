@@ -5,19 +5,37 @@ vi /etc/sysconfig/network-scripts/ifcfg-eth0
 nameserver 202.96.134.133
 nameserver 8.8.8.8
 
-安装crul:	 sudo apt install curl
+sudo yum -y update
 
-如果git默认没有安装也执行安装：yum install git  (sudo apt install git)
+sudo yum install vim
+安装crul:	 sudo yum install curl
+
+如果git默认没有安装也执行安装：sudo yum install git  (sudo apt install git)
 
 设置git参数：
-git config --global http.postBuffer 524288000
+sudo git config --global http.postBuffer 524288000
 
 第一步、安装配置容器docker
-列出可安装版本： yum list docker-ce.x86_64  --showduplicates |sort -r
+卸载旧版本的 Docker
+$ sudo yum erase docker docker-common docker-client docker-compose
+添加 Docker 的 yum 源
+创建一个 /etc/yum.repos.d/docker.repo 文件，内容如下：
+[dockerrepo]
+name=Docker Repository
+baseurl=https://yum.dockerproject.org/repo/main/centos/7/
+enabled=1
+gpgcheck=1
+gpgkey=https://yum.dockerproject.org/gpg
+
+sudo yum install -y docker-engine
+sudo systemctl enable docker.service
+sudo systemctl start docker
+
+（列出可安装版本： sudo yum list docker-ce.x86_64  --showduplicates |sort -r）
 从daocloud安装docker:	 yum -y install docker-ce （安装最新版本）
-       （指定版本安装：	yum install 17.09.0.ce-1.el7.centos）
+       （指定版本安装：sudo yum install 17.09.0.ce-1.el7.centos）
         （ubuntu下安装：curl -sSL https://get.daocloud.io/docker | sh  ） （不行多试几次）
-添加当前用户到docker:	sudo usermod -aG docker root
+添加当前用户到docker:	sudo usermod -aG docker jack
 修改 Docker 服务配置:	sudo vi /etc/sysconfig/docker  （Ubuntu: /etc/default/docker)  
     （解决centos7 docker1.9 没有配置文件，请看文档末尾解决方案）
 添加DOCKER_OPTS="$DOCKER_OPTS -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock --api-cors-header='*'"
