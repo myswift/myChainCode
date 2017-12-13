@@ -1,3 +1,21 @@
+1,添加用户
+adduser jack
+2，设置密码
+passwd jack
+查看权限
+ls -l /etc/sudoers
+使用 “su –” 命令，进入超级用户，进入etc目录 “cd /etc”
+为sudoers文件添加写入的权限：使用命令   “chmod u+w sudoers”
+
+添加用户
+vim /etc/sudoers
+找到“rootALL=(ALL) ALL ”，在后面添加："jack  ALL=(ALL) ALL"
+改回原来权限
+chmod -v u-w /etc/sudoers
+
+sudo yum install vim
+yum -y install xinetd telnet telnet-server
+
 
 修改DNS：
 vi /etc/sysconfig/network-scripts/ifcfg-eth0
@@ -47,10 +65,12 @@ docker pull hello-world
 docker run hello-world
 
 第二步、安装配置服务编排docker-compse
+没有python-pip包就执行命令 yum -y install epel-release
+sudo yum -y install epel-release
+安装pip:		sudo yum install python-pip  （sudo apt-get install python-pip）
+安装docker compose:	sudo -i
+curl -L https://get.daocloud.io/docker/compose/releases/download/1.16.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
 
-安装pip:		yum install python-pip  （sudo apt-get install python-pip）
-安装docker compose:	 pip install docker-compose（不一定时最新版本）
-	curl -L https://github.com/docker/compose/releases/download/1.17.0/docker-compose-Linux-x86_64 -`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
 安装目录：/usr/bin/docker-compose
 ### ubuntu： curl sudo apt-ge-L https://get.daocloud.io/docker/compose/releases/download/1.16.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
 修改权限：		chmod +x /usr/bin/docker-compose
