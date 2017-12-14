@@ -139,3 +139,14 @@ srw-rw---- 1 root docker 0 Jul 12 22:41 /var/run/docker.sock
 sudo gpasswd -a ${USER} docker
 这样就加入到了用户组，但是此时group命令获取到的是缓存组的信息，我们执行docker images的话，仍然会报错，我们需要手动切换一次组：
 newgrp - docker
+
+----------------------------服务器连接频繁断开（几分钟断一次）2017.11.13--------------
+注释打开
+ClientAliveInterval 0 
+重启服务
+systemctl restart sshd.service
+systemctl enable sshd.service
+
+---------------------------非root用户启动fabric报错2017.11.13---------------------
+runtime error: invalid memory address or nil pointer dereference
+1.9.2降到1.8.2
