@@ -14,7 +14,7 @@ vim /etc/sudoers
 chmod -v u-w /etc/sudoers
 
 sudo yum install vim
-yum -y install xinetd telnet telnet-server
+sudo yum -y install xinetd telnet telnet-server
 
 
 修改DNS：
@@ -73,27 +73,27 @@ curl -L https://get.daocloud.io/docker/compose/releases/download/1.16.1/docker-c
 
 安装目录：/usr/bin/docker-compose
 ### ubuntu： curl sudo apt-ge-L https://get.daocloud.io/docker/compose/releases/download/1.16.1/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
-修改权限：		chmod +x /usr/bin/docker-compose
+修改权限：		chmod +x /usr/local/bin/docker-compose
 查看安装的版本：docker-compose -v
 
 第三步、安装配置GO
 
-wget --no-check-certificate  https://dl.gocn.io/golang/1.9.2/go1.9.2.linux-amd64.tar.gz
+wget --no-check-certificate  https://dl.gocn.io/golang/1.8.2/go1.8.2.linux-amd64.tar.gz
 https://storage.googleapis.com/golang/go1.9.linux-amd64.tar.gz   （需要安装SSL）
 或者使用国内镜像： https://dl.gocn.io/golang/1.9.2/go1.9.2.linux-amd64.tar.gz
 
-sudo tar -C /usr/local -xzf go1.9.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.8.2.linux-amd64.tar.gz
 
-sudo tar -C /usr/local -xzf go1.9.2.linux-amd64.tar.gz
 
-vi /etc/profile
+
+vi ~/.profile
 
 export PATH=$PATH:/usr/local/go/bin 
 export GOROOT=/usr/local/go 
 export GOPATH=$HOME/go 
 export PATH=$PATH:$HOME/go/bin
 
-source /etc/profile
+source ~/.profile
 cd ~
 mkdir go
 
