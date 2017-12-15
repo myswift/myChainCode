@@ -150,3 +150,15 @@ systemctl enable sshd.service
 ---------------------------非root用户启动fabric报错2017.11.13---------------------
 runtime error: invalid memory address or nil pointer dereference
 1.9.2降到1.8.2
+
+----------------------------安装ca报错----------2016.11.15---
+安装https://www.cnblogs.com/studyzy/p/7482451.html 文档安装CA集成环境的时候报错
+go get -u github.com/hyperledger/fabric-ca/cmd/...
+github.com/hyperledger/fabric-ca/vendor/github.com/miekg/pkcs11
+../../../fabric-ca/vendor/github.com/miekg/pkcs11/pkcs11.go:29:18: fatal error: ltdl.h: No such file or directory
+ #include <ltdl.h>
+ 解决方案：
+ 如果在ubunt操作系统中，只需安装：
+apt install libltdl3-dev
+如果在centos操作系统中，只需安装：
+ yum install libtool-ltdl-devel
