@@ -3,13 +3,9 @@
 2.版本V3
 3.签名算法sha256ECDSA
 
-
-
-
 FABRIC-JAVA-SDK中使用到的CA：
 ./e2e-2Orgs/channel/crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/signcerts
 ./e2e-2Orgs/channel/crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore
-
 
 docker-compose.yaml配置文件中用到的CA：
 1、Orderer节点
@@ -21,9 +17,6 @@ docker-compose.yaml配置文件中用到的CA：
 ./e2e-2Orgs/channel/crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp（文件夹下所有）
 ./e2e-2Orgs/channel/crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls（文件夹下所有）
 
-
-
-
 PEER配置文件需要替换的证书：
 PEER的CA根证书
 .pem格式替换crypto-config/peerOrganizations/org1.example.com/ca/ca.org1.example.com-cert.pem
@@ -33,22 +26,16 @@ crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tl
 CA根证书的私钥
 .pem格式替换crypto-config/peerOrganizations/org1.example.com/ca/fcf776b02a05600408d0be9d9752afc59f64950b721cacb363b5b95a0fea6216_sk
 
-
 PEER的CA根证书生成3套子证书
 第一套的证书用来替换crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp/signcerts/peer.org1.example.com-cert.pem
 第一套的私钥用来替换crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp/keystore/46c70c47d10e70d2a8a4711eb3b766d3621927ad045691dcd258fa9e93bc2c2c_sk
-
 
 第二套的证书用来替换crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp/admincerts/Admin@org1.example.com-cert.pem
 crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/signcerts/Admin@org1.example.com-cert.pem
 第二套的私钥用来替换crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/keystore/6b32e59640c594cf633ad8c64b5958ef7e5ba2a205cfeefd44a9e982ce624d93_sk
 
-
 第三套的证书用来替换crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/server.crt
 第三套的私钥用来替换crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/server.key
-
-
-
 
 ORDERER配置文件需要替换的证书：
 ORDERER的CA根证书（注意ORDERER的根证书与PEER的根证书是平级的）
@@ -59,8 +46,6 @@ ORDERER的CA根证书生成3套子证书
 第一套的证书用来替换crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp/signcerts/orderer.example.com-cert.pem
 第一套的私钥用来替换crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp/keystore/30652478a0678558e8573fa33246175b33997226b63fa40503290187e0f99144_sk
 
-
 第二套的证书用来替换crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/msp/admincerts/Admin@example.com-cert.pem
-
 第三套的证书用来替换crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
 第三套的私钥用来替换crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.key
