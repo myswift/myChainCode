@@ -1,0 +1,187 @@
+本文主要介绍Fabric 1.0 官网对于configtxgen的使用介绍，英文源文档在：Fabric 1.0官方文档
+
+configtxgen用于生成如下4个文件。
+orderer genesis block,（最终生成的文件名为：orderer.block，用来给Orderer节点做排序服务的）
+channel channel configuration transaction,（用来配置和创建channel的配置文件）
+and two anchor peer transactions - one for each Peer Org.（生成的信息存放在orderer.block初始块文件中，anchor peer暂时理解为初始化时的默认节点）
+configtxgen工具获取
+curl -sSL https://goo.gl/Q3YRTi | bash命令下载（如果提示网络连不上，就得翻墙）；
+首先下载Fabric源码，然后cd到其根目录下，使用
+make configtxgen
+命令会在
+build/bin/configtxgen
+里边生成configtxgen工具。
+
+How does it work?
+官网提供了一份使用configtxgen的配置文件configtx.yaml，在fabric-samples/first-network目录下。
+
+[html] view plain copy
+# Copyright IBM Corp. All Rights Reserved.  
+#  
+# SPDX-License-Identifier: Apache-2.0  
+#  
+  
+---  
+################################################################################  
+#  
+#   Profile  
+#  
+#   - Different configuration profiles may be encoded here to be specified  
+#   as parameters to the configtxgen tool  
+#  
+################################################################################  
+Profiles:  
+  
+    TwoOrgsOrdererGenesis:  
+        Orderer:  
+            <<: *OrdererDefaults  
+            Organizations:  
+                - *OrdererOrg  
+        Consortiums:  
+            SampleConsortium:  
+                Organizations:  
+                    - *Org1  
+                    - *Org2  
+    TwoOrgsChannel:  
+        Consortium: SampleConsortium  
+        Application:  
+            <<: *ApplicationDefaults  
+            Organizations:  
+                - *Org1  
+                - *Org2  
+  
+################################################################################  
+#  
+#   Section: Organizations  
+#  
+#   - This section defines the different organizational identities which will  
+#   be referenced later in the configuration.  
+#  
+################################################################################  
+Organizations:  
+  
+    # SampleOrg defines an MSP using the sampleconfig.  It should never be used  
+    # in production but may be used as a template for other definitions  
+    - &OrdererOrg  
+        # DefaultOrg defines the organization which is used in the sampleconfig  
+        # of the fabric.git development environment  
+        Name: OrdererOrg  
+  
+        # ID to load the MSP definition as  
+        ID: OrdererMSP  
+  
+        # MSPDir is the filesystem path which contains the MSP configuration  
+        MSPDir: crypto-config/ordererOrganizations/example.com/msp  
+  
+    - &Org1  
+        # DefaultOrg defines the organization which is used in the sampleconfig  
+        # of the fabric.git development environment  
+        Name: Org1MSP  
+  
+        # ID to load the MSP definition as  
+        ID: Org1MSP  
+  
+        MSPDir: crypto-config/peerOrganizations/org1.example.com/msp  
+  
+        AnchorPeers:  
+            # AnchorPeers defines the location of peers which can be used  
+            # for cross org gossip communication.  Note, this value is only  
+            # encoded in the genesis block in the Application section context  
+            - Host: peer0.org1.example.com  
+              Port: 7051  
+  
+    - &Org2  
+        # DefaultOrg defines the organization which is used in the sampleconfig  
+        # of the fabric.git development environment  
+        Name: Org2MSP  
+  
+        # ID to load the MSP definition as  
+        ID: Org2MSP  
+  
+        MSPDir: crypto-config/peerOrganizations/org2.example.com/msp  
+  
+        AnchorPeers:  
+            # AnchorPeers defines the location of peers which can be used  
+            # for cross org gossip communication.  Note, this value is only  
+            # encoded in the genesis block in the Application section context  
+            - Host: peer0.org2.example.com  
+              Port: 7051  
+  
+################################################################################  
+#  
+#   SECTION: Orderer  
+#  
+#   - This section defines the values to encode into a config transaction or  
+#   genesis block for orderer related parameters  
+#  
+################################################################################  
+Orderer: &OrdererDefaults  
+  
+    # Orderer Type: The orderer implementation to start  
+    # Available types are "solo" and "kafka"  
+    OrdererType: solo  
+  
+    Addresses:  
+        - orderer.example.com:7050  
+  
+    # Batch Timeout: The amount of time to wait before creating a batch  
+    BatchTimeout: 2s  
+  
+    # Batch Size: Controls the number of messages batched into a block  
+    BatchSize:  
+  
+        # Max Message Count: The maximum number of messages to permit in a batch  
+        MaxMessageCount: 10  
+  
+        # Absolute Max Bytes: The absolute maximum number of bytes allowed for  
+        # the serialized messages in a batch.  
+        AbsoluteMaxBytes: 98 MB  
+  
+        # Preferred Max Bytes: The preferred maximum number of bytes allowed for  
+        # the serialized messages in a batch. A message larger than the preferred  
+        # max bytes will result in a batch larger than preferred max bytes.  
+        PreferredMaxBytes: 512 KB  
+  
+    Kafka:  
+        # Brokers: A list of Kafka brokers to which the orderer connects  
+        # NOTE: Use IP:port notation  
+        Brokers:  
+            - 127.0.0.1:9092  
+  
+    # Organizations is the list of orgs which are defined as participants on  
+    # the orderer side of the network  
+    Organizations:  
+  
+################################################################################  
+#  
+#   SECTION: Application  
+#  
+#   - This section defines the values to encode into a config transaction or  
+#   genesis block for application related parameters  
+#  
+################################################################################  
+Application: &ApplicationDefaults  
+  
+    # Organizations is the list of orgs which are defined as participants on  
+    # the application side of the network  
+    Organizations:<span style="font-family:Lato, proxima-nova, Helvetica Neue, Arial, sans-serif;color:#010101;"><span style="font-size: 16px; letter-spacing: 0.3px;">  
+</span></span>  
+
+配置文件中Profiles：One for the orderer genesis block - TwoOrgsOrdererGenesis - and one for our channel - TwoOrgsChannel
+Organizations：配置了2个组织信息，需要注意的是里边的ID对应的就是每个组织的MSPID，MSPDir对应的就是上一篇博文中讲到的cryptogen生成的MSP证书文件路径。AnchorPeers配置的是启动节点的容器名称和端口号
+Orderer：配置了Orderer节点的一些配置信息，特别的地方就是OrdererType配置的是solo算法
+
+使用如下命令，生成初始块文件：
+../bin/configtxgen -profile TwoOrgsOrdererGenesis -outputBlock ./channel-artifacts/genesis.block
+使用如下命令，生成channel配置文件（命名为mychannel）：
+export CHANNEL_NAME=mychannel
+
+# this file contains the definitions for our sample channel
+../bin/configtxgen -profile TwoOrgsChannel -outputCreateChannelTx ./channel-artifacts/channel.tx -channelID $CHANNEL_NAM
+使用如下命令，生成Org1配置文件：
+../bin/configtxgen -profile TwoOrgsChannel -outputAnchorPeersUpdate ./channel-artifacts/Org1MSPanchors.tx -channelID $CHANNEL_NAME -asOrg Org1MSP
+
+使用如下命令，生成Org2配置文件：
+../bin/configtxgen -profile TwoOrgsChannel -outputAnchorPeersUpdate ./channel-artifacts/Org2MSPanchors.tx -channelID $CHANNEL_NAME -asOrg Org2MSP
+
+生成的目录文件夹路径为fabric-samples/first-network/channel-artifacts
