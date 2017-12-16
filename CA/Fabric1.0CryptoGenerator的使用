@@ -1,0 +1,108 @@
+本文主要介绍Fabric 1.0 官网对于cryptogen的使用介绍，英文源文档在：Fabric 1.0官方文档
+cryptogen是一个生成认证证书(x509 certs)的工具，在官网提供的fabric-samples/bin目录下。
+单独从github下载的fabric-samples里边没有bin目录，所以得在fabric-samples目录下使用附件的shell脚本文件下载或使用
+curl -sSL https://goo.gl/Q3YRTi | bash
+命令下载（如果提示网络连不上，就得翻墙）；另外还有个方法就是从源码编译，首先下载Fabric源码，然后cd到其根目录下，使用
+make cryptogen
+命令会在
+build/bin/cryptogen 
+里边生成crytogen工具。
+How does it work?
+官网提供了一份使用cryptogen的配置文件crypto-config.yaml，在fabric-samples/first-network目录下。包含了需要生成证书和公私钥的Orderer与peer配置（官网文档中提的是组织Organization的概念）。这些证书代表了身份，用来在实体间进行通信以及交易的时候进行签名与验证身份。配置文件内容如下：
+[html] view plain copy
+#  
+# Copyright IBM Corp. All Rights Reserved.  
+#  
+# SPDX-License-Identifier: Apache-2.0  
+#  
+# ---------------------------------------------------------------------------  
+# "OrdererOrgs" - Definition of organizations managing orderer nodes  
+# ---------------------------------------------------------------------------  
+OrdererOrgs:  
+  # ---------------------------------------------------------------------------  
+  # Orderer  
+  # ---------------------------------------------------------------------------  
+  - Name: Orderer  
+    Domain: example.com  
+  
+    # ---------------------------------------------------------------------------  
+    # "Specs" - See PeerOrgs below for complete description  
+    # ---------------------------------------------------------------------------  
+    Specs:  
+      - Hostname: orderer  
+  
+# ---------------------------------------------------------------------------  
+# "PeerOrgs" - Definition of organizations managing peer nodes  
+# ---------------------------------------------------------------------------  
+PeerOrgs:  
+  # ---------------------------------------------------------------------------  
+  # Org1  
+  # ---------------------------------------------------------------------------  
+  - Name: Org1  
+    Domain: org1.example.com  
+  
+    # ---------------------------------------------------------------------------  
+    # "Specs"  
+    # ---------------------------------------------------------------------------  
+    # Uncomment this section to enable the explicit definition of hosts in your  
+    # configuration.  Most users will want to use Template, below  
+    #  
+    # Specs is an array of Spec entries.  Each Spec entry consists of two fields:  
+    #   - Hostname:   (Required) The desired hostname, sans the domain.  
+    #   - CommonName: (Optional) Specifies the template or explicit override for  
+    #                 the CN.  By default, this is the template:  
+    #  
+    #                              "{{.Hostname}}.{{.Domain}}"  
+    #  
+    #                 which obtains its values from the Spec.Hostname and  
+    #                 Org.Domain, respectively.  
+    # ---------------------------------------------------------------------------  
+    # Specs:  
+    #   - Hostname: foo # implicitly "foo.org1.example.com"  
+    #     CommonName: foo27.org5.example.com # overrides Hostname-based FQDN set above  
+    #   - Hostname: bar  
+    #   - Hostname: baz  
+  
+    # ---------------------------------------------------------------------------  
+    # "Template"  
+    # ---------------------------------------------------------------------------  
+    # Allows for the definition of 1 or more hosts that are created sequentially  
+    # from a template. By default, this looks like "peer%d" from 0 to Count-1.  
+    # You may override the number of nodes (Count), the starting index (Start)  
+    # or the template used to construct the name (Hostname).  
+    #  
+    # Note: Template and Specs are not mutually exclusive.  You may define both  
+    # sections and the aggregate nodes will be created for you.  Take care with  
+    # name collisions  
+    # ---------------------------------------------------------------------------  
+    Template:  
+      Count: 2  
+      # Start: 5  
+      # Hostname: {{.Prefix}}{{.Index}} # default  
+  
+    # ---------------------------------------------------------------------------  
+    # "Users"  
+    # ---------------------------------------------------------------------------  
+    # Count: The number of user accounts _in addition_ to Admin  
+    # ---------------------------------------------------------------------------  
+    Users:  
+      Count: 1  
+  
+  # ---------------------------------------------------------------------------  
+  # Org2: See "Org1" for full specification  
+  # ---------------------------------------------------------------------------  
+  - Name: Org2  
+    Domain: org2.example.com  
+    Template:  
+      Count: 2  
+    Users:  
+      Count: 1  
+
+里边主要包含Orderer组织的配置（包含1个Orderer）和peer组织的配置（包含2个peer组织org1,org2）。
+Name：定义名称
+Domain与Hostname：组合成为节点的名称，也是生成后的文件夹的名称。
+Count：用来指定每个org下边所拥有的节点数，这里配置的是每个org各2个peer
+Users：用来指定添加进节点的默认用户数
+使用如下命令，生成证书文件：
+cryptogen generate --config=./crypto-config.yaml
+生成的目录文件夹路径为fabric-samples/first-network/crypto-config
