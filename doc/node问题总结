@@ -1,0 +1,24 @@
+---------------------------2017.12.18---------------
+var hfc = require('fabric-client')
+node ./rest.js 
+报错
+fs.js:924
+  return binding.readdir(pathModule.toNamespacedPath(path), options.encoding);
+                 ^
+Error: ENOENT: no such file or directory, scandir '/home/jack/nodeTest/node_modules/grpc/src/node/extension_binary'
+    at Object.fs.readdirSync (fs.js:924:18)
+    at Object.<anonymous> (/home/jack/nodeTest/node_modules/grpc/src/grpc_extension.js:37:23)
+    at Module._compile (module.js:641:30)
+    at Object.Module._extensions..js (module.js:652:10)
+    at Module.load (module.js:560:32)
+    at tryModuleLoad (module.js:503:12)
+    at Function.Module._load (module.js:495:3)
+    at Module.require (module.js:585:17)
+    at require (internal/module.js:11:18)
+    at Object.<anonymous> (/home/jack/nodeTest/node_modules/grpc/src/client.js:38:12)
+    
+    我们可以通过重建 grpc 来解决，执行以下命令
+npm rebuild grpc
+
+
+
