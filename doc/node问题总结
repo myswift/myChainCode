@@ -20,5 +20,10 @@ Error: ENOENT: no such file or directory, scandir '/home/jack/nodeTest/node_modu
     我们可以通过重建 grpc 来解决，执行以下命令
 npm rebuild grpc
 
+------------------------------2017.12.19--------------------
+throw er; // Unhandled 'error' event
+      ^
+Error: listen EADDRINUSE :::3000
 
+监听的端口已经被使用
 
