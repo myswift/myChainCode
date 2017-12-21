@@ -1,0 +1,17 @@
+[2017-12-21 11:03:38.015] [ERROR] Helper - Error: Calling enrollment endpoint failed with error [Error: write EPROTO 140063596390208:error:140770FC:SSL routines:SSL23_GET_SERVER_HELLO:unknown protocol:../deps/openssl/openssl/ssl/s23_clnt.c:825:
+]
+at ClientRequest.<anonymous> (/home/jack/nodeTest/node_modules/fabric-ca-client/lib/FabricCAClientImpl.js:724:12)
+
+解决办法：
+修改配置文件  "ca": "https://localhost:7054",  https改为http
+network-config.json
+"network-config": {
+		"orderer": {
+			"url": "grpcs://192.168.100.130:7050",
+			"server-hostname": "orderer.example.com",
+			"tls_cacerts": "../../go/src/github.com/hyperledger/fabric/examples/e2e_cli/crypto-config/ordererOrganizations/example.com/orderers/orderer.example.com/tls/ca.crt"
+		},
+		"org1": {
+			"name": "peerOrg1",
+			"mspid": "Org1MSP",
+			"ca": "https://localhost:7054",
