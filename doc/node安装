@@ -25,3 +25,7 @@ sudo make uninstall
 
 curl -L https://npmjs.com/install.sh | sh
 
+---------------node卸载----------
+sudo apt-get remove nodejs
+make
+sudo make uninstall
