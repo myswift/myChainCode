@@ -9,3 +9,19 @@ sudo make
 sudo make install
 node -v
 npm -v
+
+--------------------------npm 卸载--------------------
+手动卸载了再重装了npm
+
+1、sudo npm uninstall npm -g
+
+如果步骤1卸不掉npm了（我就是这种情况）
+
+2、进到npm的安装目录 /usr/local/lib/node_modules/npm/
+
+sudo make uninstall
+
+3、手动重装npm
+
+curl -L https://npmjs.com/install.sh | sh
+
