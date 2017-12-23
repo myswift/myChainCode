@@ -1,0 +1,15 @@
+orderer.yaml配置文件
+
+orderer:
+  image: hyperledger/fabric-orderer
+  environment:
+    - ORDERER_GENERAL_LEDGERTYPE=ram //或者file，建议file，支持持久化
+    - ORDERER_GENERAL_BATCHTIMEOUT=10s //出块最大时间
+    - ORDERER_GENERAL_BATCHSIZE_MAXMESSAGECOUNT=10 //一个块中最大交易数
+    - ORDERER_GENERAL_MAXWINDOWSIZE=1000
+    - ORDERER_GENERAL_ORDERERTYPE=solo
+    - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+    - ORDERER_GENERAL_LISTENPORT=7050
+    - ORDERER_RAMLEDGER_HISTORY_SIZE=100
+  ports:
+    - 7050:7050
