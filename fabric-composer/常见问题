@@ -1,0 +1,21 @@
+安装报错；
+命令：
+执行  angular-app/npm start
+
+  at Promise.resolve.then (/home/jack/Decentralized-Energy-Composer/angular-app/node_modules/composer-common/lib/connectionprofilemanager.js:136:42)
+[1]     at <anonymous>
+[1] npm ERR! code ELIFECYCLE
+[1] npm ERR! errno 1
+[1] npm ERR! angular-app@0.0.1 app: `composer-rest-server -c admin@decentralized-energy-network -n never -w true`
+[1] npm ERR! Exit status 1
+[1] npm ERR! 
+[1] npm ERR! Failed at the angular-app@0.0.1 app script.
+[1] npm ERR! This is probably not a problem with npm. There is likely additional logging output above.
+[1] 
+[1] npm ERR! A complete log of this run can be found in:
+[1] npm ERR!     /home/jack/.npm/_logs/2017-12-25T05_51_31_618Z-debug.log
+[1] npm run app exited with code 1
+[0] ** NG Live Development Server is running on http://0.0.0.0:4200 **
+
+解决办法：
+删除 angular-app/node_modules/  重新npm install
