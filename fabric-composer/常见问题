@@ -1,3 +1,4 @@
+---------------------------------2017-12-25------------------------------
 安装报错；
 命令：
 执行  angular-app/npm start
@@ -19,3 +20,14 @@
 
 解决办法：
 删除 angular-app/node_modules/  重新npm install
+
+
+----------------------------------------2018-1-3-----------------------
+4200端口访问权限问题
+解决 Webpack "Invalid Host Header"
+解决方案
+官方提供了两个解决方案：
+1,执行 webpack-dev-server 命令时手动添加 --public 选项，取值为授权的 host，这是官方建议的做法，目的是为了安全。
+2,设置 webpack-dev-server 的配置项 disableHostCheck 为 true 以禁用这一检测，如果开发者使用了代理，或在开发环境中不 care 这些安全问题，该设置可以直接斩草除根
+修改文件：angular-app/node_modules/webpack-dev-server/lib/Server.js
+        this.disableHostCheck = !!options.disableHostCheck; 为： this.disableHostCheck = true;
