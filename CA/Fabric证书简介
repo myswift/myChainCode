@@ -1,0 +1,59 @@
+一.证书目录解析
+ 
+通过cryptogen生成所有证书文件后，以peerOrgannizations的第一个组织树org1为例，每个目录和对应文件的功能如下：
+ 
+ca: 存放组织的根证书和对应的私钥文件，默认采用EC算法，证书为自签名。组织内的实体将基于该证书作为证书根。
+tlsca:存放组织tls连接用的根证书和私钥文件。（TLS是传输层安全协议，其实就是SSL，现在叫TLS了）
+msp：存放代表该组织的身份信息。
+       admincerts:组织管理员的身份验证证书，被根证书签名。
+       cacerts:组织的根证书，同ca目录下文件。
+       tlscacerts:用于TLS的ca证书，自签名。
+peers:存放属于该组织的所有peer节点。
+       peer0：第一个peer的信息，包括其msp证书和TLS证书两类。
+             msp:
+                  admincerts：组织管理员的身份验证证书。peer将基于这些证书来认证交易签署这是否为管理员身份。
+                  cacerts：组织的根证书.
+                  keystore:本节点的身份私钥，用来签名。
+                  signcerts：验证本节点签名的证书，被组织根证书签名。
+                  tlscacerts：TLS连接用的身份证书，即组织TLS证书。
+             tls:存放tls相关的证书和私钥
+                  ca.crt:组织的根证书
+                  server.crt:验证本节点签名的证书，被组织根证书签名。
+                  server.key：本节点的身份私钥，用来签名。
+       peer1:第二个peer的信息，结构类似。（省略）
+users：存放属于该组织的用户的实体。
+      Admin：管理员用户的信息，包括其msp证书和tls证书两类。
+            msp:
+                  admincerts：组织根证书作为管理者身份验证证书。
+                  cacerts：组织的根证书.
+                  keystore:本用户的身份私钥，用来签名。
+                  signcerts：管理员用户的身份验证证书，被组织根证书签名。要被某个Peer认可，则必须放到该peer的msp/admincerts下。
+                  tlscacerts：TLS连接用的身份证书，即组织TLS证书。
+           tls:存放tls相关的证书和私钥
+                ca.crt:组织的根证书
+                server.crt:管理员的用户身份验证证书，被组织根证书签名。
+                server.key：管理员用户的身份私钥，用来签名。
+     User1:第一个用户的信息，包括msp证书和tls证书两类。
+           msp：
+                 admincerts：组织根证书作为管理者身份验证证书。
+                 cacerts：组织的根证书.
+                 keystore:本用户的身份私钥，用来签名。
+                 signcerts：验证本用户签名的身份证书，被组织根证书签名。
+                 tlscacerts：TLS连接用的身份证书，即组织TLS证书。
+           tls:存放tls相关的证书和私钥
+                 ca.crt:组织的根证书
+                 server.crt:验证用户签名的身份证书，被组织根证书签名。
+                 server.key：用户的身份私钥，用来签名。
+    User2：第二个用户的信息，结构类似（省略）
+ 
+二.证书内容解析
+查看证书文件（实际上，数字证书就是经过CA认证过的公钥）的标准为X.509，编码格式为pem，以-----BEGIN开头,以-----END结尾。X.509 数字证书不但包括用户名和公共密钥，而且还包括有关该用户的其他信息。除了扩展名为PEM的还有以下这些：
+CRT ：应该是certificate的三个字母，还是证书的意思。打开看也是pem编码格式。
+KEY： 用来存放一个公钥或私钥，并非X.509证书。打开看依然PEM格式。
+ 
+证书的默认签名算法为ECDSA，Hash算法为SHA-256。Fabric中设计中考虑了三种类型证书：
+登记证书（ECert）：颁发给提供了注册凭证的用户或节点实体，长期有效。（主要就是通ECert对实体身份检验）
+通信证书（TLSCert）：TLS证书用来保障通信链路安全，控制对网络层的接入访问，可以对远端实体身份校验，防止窃听。
+交易证书（TCert）：颁发给用户，控制每个交易的权限，一般针对某个交易，短期有效。（此功能fabric还暂未启用）
+ 
+在chaincode里可以通过shim API的GetCreator函数提取调用当前交易的客户端的身份证书，使用GO语言的pem包将证书解码，然后使用x.509包解析证书中的信息。
