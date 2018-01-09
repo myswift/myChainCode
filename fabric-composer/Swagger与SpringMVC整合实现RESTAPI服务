@@ -1,4 +1,4 @@
----依赖管理
+一，依赖管理
 在整合之前，需要把所有使用到的依赖包全部引入
 <!-- swagger-springmvc -->
     <dependency>
@@ -55,7 +55,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Created by xiaohui on 2016/1/14.
+ * 
  */
 @Configuration
 @EnableSwagger
@@ -108,7 +108,7 @@ public class SwaggerConfig {
 <bean class="com.yrok.swagger.SwaggerConfig" /> 
 
 配置相关controller的api：
-package com.yrok.controller;  
+package com.crc.controller;  
   
 import javax.annotation.Resource;  
   
