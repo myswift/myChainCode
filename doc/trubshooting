@@ -168,3 +168,13 @@ apt install libltdl3-dev
  报错：
 make: g++: Command not found
 npm install --registry=https://registry.npm.taobao.org rpm -q gcc rpm -q gcc-c++
+
+--------------解压文件报错
+wget --no-check-certificate https://dl.gocn.io/golang/1.9.2/go1.9.2.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.9.2.linux-amd64.tar.gz
+gzip:
+ stdin: not in gzip format 
+tar: Child returned status 1 
+tar: Error is not recoverable: exiting now
+可以通过file命令辨识一下压缩文件的类型：
+原来这个压缩文件是html
