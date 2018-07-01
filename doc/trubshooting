@@ -179,7 +179,7 @@ tar: Error is not recoverable: exiting now
 可以通过file命令辨识一下压缩文件的类型：
 原来这个压缩文件是html
 
----------------Mac安装nvm，输入nvm不识别解决办法
+---------------Mac安装nvm，输入nvm不识别解决办法---2018.7.1----
 版本安装地址命令是：
 curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.9/install.sh | bash
 但随着版本的增长地址可能会换，所以你在安装时最好先去他的官网找安装命令。
